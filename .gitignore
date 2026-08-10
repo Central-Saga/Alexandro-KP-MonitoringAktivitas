@@ -1,0 +1,27 @@
+# ==================================================
+# Root project
+# ==================================================
+
+# File environment / konfigurasi rahasia
+.env
+.env.*
+!.env.example
+
+# Dependency umum
+node_modules/
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Log
+*.log
+
+# Temporary files
+*.tmp
+*.temp
