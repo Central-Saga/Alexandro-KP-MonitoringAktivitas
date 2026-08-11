@@ -1,0 +1,15 @@
+{
+    "name": "alexandro/monitoring-aktivitas-karyawan-csm",
+    "autoload": {
+        "psr-4": {
+            "Alexandro\\MonitoringAktivitasKaryawanCsm\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Alexandro2204",
+            "email": "sandrobetsantos@gmail.com"
+        }
+    ],
+    "require": {}
+}

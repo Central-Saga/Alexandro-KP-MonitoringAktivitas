@@ -1,0 +1,72 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: postgres-csm
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: monitoring_aktivitas_csm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+
+    container_name: backend-csm
+    restart: unless-stopped
+
+    ports:
+      - "8000:80"
+
+    volumes:
+      - ./Backend:/var/www/html
+
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: monitoring_aktivitas_csm
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
+    depends_on:
+      - postgres
+
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+
+    container_name: frontend-csm
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./Frontend:/app
+      - frontend_node_modules:/app/node_modules
+
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+
+    depends_on:
+      - backend
+
+
+volumes:
+
+  postgres_data:
+
+  frontend_node_modules:
