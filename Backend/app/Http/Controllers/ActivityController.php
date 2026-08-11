@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ActivityCreated;
+use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Services\ActivityService;
 use Illuminate\Http\Request;
@@ -14,9 +16,9 @@ class ActivityController extends Controller
 
     public function index()
     {
-        return response()->json([
-            'data' => $this->service->getAll(),
-        ]);
+        return ActivityResource::collection(
+            $this->service->getAll()
+        );
     }
 
     public function show(int $id)
@@ -29,9 +31,7 @@ class ActivityController extends Controller
             ], 404);
         }
 
-        return response()->json([
-            'data' => $activity,
-        ]);
+        return new ActivityResource($activity);
     }
 
     public function store(Request $request)
@@ -46,9 +46,11 @@ class ActivityController extends Controller
 
         $activity = $this->service->create($data);
 
+        ActivityCreated::dispatch($activity);
+
         return response()->json([
             'message' => 'Aktivitas berhasil dibuat',
-            'data' => $activity,
+            'data' => new ActivityResource($activity),
         ], 201);
     }
 
@@ -74,8 +76,39 @@ class ActivityController extends Controller
 
         return response()->json([
             'message' => 'Aktivitas berhasil diperbarui',
-            'data' => $activity,
+            'data' => new ActivityResource($activity),
         ]);
+    }
+
+    public function uploadMedia(Request $request, int $id)
+    {
+        $activity = $this->service->getById($id);
+
+        if (! $activity) {
+            return response()->json([
+                'message' => 'Aktivitas tidak ditemukan',
+            ], 404);
+        }
+
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $media = $activity
+            ->addMediaFromRequest('file')
+            ->toMediaCollection('activity_files');
+
+        return response()->json([
+            'message' => 'File berhasil diupload',
+            'data' => [
+                'id' => $media->id,
+                'name' => $media->name,
+                'file_name' => $media->file_name,
+                'mime_type' => $media->mime_type,
+                'size' => $media->size,
+                'url' => $media->getUrl(),
+            ],
+        ], 201);
     }
 
     public function destroy(int $id)
