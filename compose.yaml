@@ -1,17 +1,15 @@
+
 services:
   postgres:
     image: postgres:17
     container_name: postgres-csm
     restart: unless-stopped
-
     environment:
       POSTGRES_DB: monitoring_aktivitas_csm
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -19,7 +17,6 @@ services:
     image: docker.io/library/redis:7-alpine
     container_name: redis-csm
     restart: unless-stopped
-
     ports:
       - "6379:6379"
 
@@ -27,16 +24,12 @@ services:
     build:
       context: ./Backend
       dockerfile: Dockerfile
-
     container_name: backend-csm
     restart: unless-stopped
-
     ports:
       - "8000:80"
-
     volumes:
       - ./Backend:/var/www/html
-
     environment:
       DB_CONNECTION: pgsql
       DB_HOST: postgres
@@ -44,29 +37,43 @@ services:
       DB_DATABASE: monitoring_aktivitas_csm
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
-
     depends_on:
       - postgres
       - redis
+
+  queue-worker:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: queue-worker-csm
+    restart: unless-stopped
+    volumes:
+      - ./Backend:/var/www/html
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: monitoring_aktivitas_csm
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - postgres
+      - redis
+    command: php artisan queue:work redis --verbose --tries=3 --timeout=90
 
   frontend:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
-
     container_name: frontend-csm
     restart: unless-stopped
-
     ports:
       - "3000:3000"
-
     volumes:
       - ./Frontend:/app
       - frontend_node_modules:/app/node_modules
-
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
-
     depends_on:
       - backend
 
