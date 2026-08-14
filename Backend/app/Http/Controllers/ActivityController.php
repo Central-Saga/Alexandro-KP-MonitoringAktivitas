@@ -51,7 +51,7 @@ class ActivityController extends Controller
             'activity_date' => 'required|date',
         ]);
 
-        // Karyawan hanya boleh membuat activity untuk dirinya sendiri.
+        // Karyawan hanya membuat activity sendiri
         if ($request->user()->role === 'karyawan') {
             $data['user_id'] = $request->user()->id;
         }
@@ -86,7 +86,7 @@ class ActivityController extends Controller
             'activity_date' => 'sometimes|date',
         ]);
 
-        // Karyawan tidak boleh memindahkan activity ke user lain.
+        // Karyawan tidak bisa memindahkan activity
         if ($request->user()->role === 'karyawan') {
             $data['user_id'] = $activity->user_id;
         }
@@ -109,7 +109,8 @@ class ActivityController extends Controller
             ], 404);
         }
 
-        Gate::authorize('update', $activity);
+        // Hanya karyawan pemilik activity
+        Gate::authorize('uploadMedia', $activity);
 
         $request->validate([
             'file' => 'required|file|max:10240',

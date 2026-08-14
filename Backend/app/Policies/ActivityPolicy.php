@@ -7,10 +7,7 @@ use App\Models\User;
 
 class ActivityPolicy
 {
-    /**
-     * Admin dan Project Manager dapat melihat daftar activity.
-     * Karyawan hanya dapat melihat activity miliknya.
-     */
+    // Lihat daftar activity
     public function viewAny(User $user): bool
     {
         return in_array($user->role, [
@@ -20,10 +17,7 @@ class ActivityPolicy
         ]);
     }
 
-    /**
-     * Admin dan Project Manager dapat melihat semua activity.
-     * Karyawan hanya dapat melihat activity miliknya.
-     */
+    // Lihat detail activity
     public function view(User $user, Activity $activity): bool
     {
         if (in_array($user->role, ['admin', 'project_manager'])) {
@@ -34,9 +28,7 @@ class ActivityPolicy
             && $activity->user_id === $user->id;
     }
 
-    /**
-     * Semua role yang sudah login dapat membuat activity.
-     */
+    // Buat activity
     public function create(User $user): bool
     {
         return in_array($user->role, [
@@ -46,10 +38,7 @@ class ActivityPolicy
         ]);
     }
 
-    /**
-     * Admin dan Project Manager dapat update semua activity.
-     * Karyawan hanya dapat update activity miliknya.
-     */
+    // Update activity
     public function update(User $user, Activity $activity): bool
     {
         if (in_array($user->role, ['admin', 'project_manager'])) {
@@ -60,9 +49,14 @@ class ActivityPolicy
             && $activity->user_id === $user->id;
     }
 
-    /**
-     * Hanya Admin yang dapat menghapus activity.
-     */
+    // Upload media activity
+    public function uploadMedia(User $user, Activity $activity): bool
+    {
+        return $user->role === 'karyawan'
+            && $activity->user_id === $user->id;
+    }
+
+    // Hapus activity
     public function delete(User $user, Activity $activity): bool
     {
         return $user->role === 'admin';
