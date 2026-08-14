@@ -21,11 +21,11 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password123'),
         ]);
 
-        // 2. Akun Supervisor
+        // 2. Akun Project Manager
         User::factory()->create([
-            'name' => 'Supervisor CSM',
-            'email' => 'supervisor@csm.com',
-            'role' => 'supervisor',
+            'name' => 'Project_manager',
+            'email' => 'project_manager@csm.com',
+            'role' => 'project_manager',
             'password' => Hash::make('password123'),
         ]);
 

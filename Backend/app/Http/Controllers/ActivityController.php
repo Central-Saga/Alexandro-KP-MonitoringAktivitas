@@ -7,6 +7,7 @@ use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Services\ActivityService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ActivityController extends Controller
 {
@@ -16,6 +17,8 @@ class ActivityController extends Controller
 
     public function index()
     {
+        Gate::authorize('viewAny', Activity::class);
+
         return ActivityResource::collection(
             $this->service->getAll()
         );
@@ -31,11 +34,15 @@ class ActivityController extends Controller
             ], 404);
         }
 
+        Gate::authorize('view', $activity);
+
         return new ActivityResource($activity);
     }
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Activity::class);
+
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
             'title' => 'required|string|max:255',
@@ -43,6 +50,11 @@ class ActivityController extends Controller
             'status' => 'nullable|string|max:50',
             'activity_date' => 'required|date',
         ]);
+
+        // Karyawan hanya boleh membuat activity untuk dirinya sendiri.
+        if ($request->user()->role === 'karyawan') {
+            $data['user_id'] = $request->user()->id;
+        }
 
         $activity = $this->service->create($data);
 
@@ -64,6 +76,8 @@ class ActivityController extends Controller
             ], 404);
         }
 
+        Gate::authorize('update', $activity);
+
         $data = $request->validate([
             'user_id' => 'sometimes|exists:users,id',
             'title' => 'sometimes|string|max:255',
@@ -71,6 +85,11 @@ class ActivityController extends Controller
             'status' => 'sometimes|string|max:50',
             'activity_date' => 'sometimes|date',
         ]);
+
+        // Karyawan tidak boleh memindahkan activity ke user lain.
+        if ($request->user()->role === 'karyawan') {
+            $data['user_id'] = $activity->user_id;
+        }
 
         $activity = $this->service->update($activity, $data);
 
@@ -89,6 +108,8 @@ class ActivityController extends Controller
                 'message' => 'Aktivitas tidak ditemukan',
             ], 404);
         }
+
+        Gate::authorize('update', $activity);
 
         $request->validate([
             'file' => 'required|file|max:10240',
@@ -120,6 +141,8 @@ class ActivityController extends Controller
                 'message' => 'Aktivitas tidak ditemukan',
             ], 404);
         }
+
+        Gate::authorize('delete', $activity);
 
         $this->service->delete($activity);
 
