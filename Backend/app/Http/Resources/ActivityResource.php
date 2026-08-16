@@ -7,14 +7,23 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ActivityResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     */
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
+
             'user_id' => $this->user_id,
+
+            'project_id' => $this->project_id,
+
+            'project' => $this->whenLoaded('project', function () {
+                return [
+                    'id' => $this->project->id,
+                    'name' => $this->project->name,
+                    'client_name' => $this->project->client_name,
+                ];
+            }),
+
             'title' => $this->title,
             'description' => $this->description,
             'status' => $this->status,

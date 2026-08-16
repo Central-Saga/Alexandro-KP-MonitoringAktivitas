@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
+use App\Models\User;
 use App\Repositories\ActivityRepository;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -12,9 +13,9 @@ class ActivityService
         protected ActivityRepository $repository
     ) {}
 
-    public function getAll(): Collection
+    public function getAll(User $user): Collection
     {
-        return $this->repository->getAll();
+        return $this->repository->getAll($user);
     }
 
     public function getById(int $id): ?Activity

@@ -2,20 +2,31 @@
 
 namespace App\Providers;
 
+use App\Contracts\RoleRepositoryInterface;
+use App\Repositories\RoleRepository;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Register application services.
      */
     public function register(): void
     {
-        //
+        /**
+         * Menghubungkan interface repository dengan implementasinya.
+         *
+         * Saat RoleService meminta RoleRepositoryInterface,
+         * Laravel otomatis memberikan RoleRepository.
+         */
+        $this->app->bind(
+            RoleRepositoryInterface::class,
+            RoleRepository::class
+        );
     }
 
     /**
-     * Bootstrap any application services.
+     * Bootstrap application services.
      */
     public function boot(): void
     {

@@ -39,5 +39,9 @@ class DatabaseSeeder extends Seeder
 
         // 4. Generate 10 Karyawan Dummy Tambahan via Factory
         User::factory(10)->create();
+
+        // Menyiapkan permission sistem dan menghubungkannya
+        // dengan role Admin, Project Manager, dan Karyawan.
+        $this->call(PermissionSeeder::class);
     }
 }

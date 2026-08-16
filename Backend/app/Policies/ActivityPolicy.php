@@ -7,68 +7,92 @@ use App\Models\User;
 
 class ActivityPolicy
 {
-    // Lihat daftar activity
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, [
+        return $user->hasAnyRole([
             'admin',
             'project_manager',
             'karyawan',
         ]);
     }
 
-    // Lihat detail activity
     public function view(User $user, Activity $activity): bool
     {
-        if (in_array($user->role, ['admin', 'project_manager'])) {
+        if ($user->hasRole('admin')) {
             return true;
         }
 
-        return $user->role === 'karyawan'
-            && $activity->user_id === $user->id;
+        if ($user->hasRole('karyawan')) {
+            return $activity->user_id === $user->id;
+        }
+
+        if ($user->hasRole('project_manager')) {
+            return $this->isManagedProjectActivity($user, $activity);
+        }
+
+        return false;
     }
 
-    // Buat activity
     public function create(User $user): bool
     {
-        return in_array($user->role, [
+        return $user->hasAnyRole([
             'admin',
             'project_manager',
             'karyawan',
         ]);
     }
 
-    // Update activity
     public function update(User $user, Activity $activity): bool
     {
-        if (in_array($user->role, ['admin', 'project_manager'])) {
+        if ($user->hasRole('admin')) {
             return true;
         }
 
-        return $user->role === 'karyawan'
-            && $activity->user_id === $user->id;
+        if ($user->hasRole('karyawan')) {
+            return $activity->user_id === $user->id;
+        }
+
+        if ($user->hasRole('project_manager')) {
+            return $this->isManagedProjectActivity($user, $activity);
+        }
+
+        return false;
     }
 
-    // Upload media activity
     public function uploadMedia(User $user, Activity $activity): bool
     {
-        return $user->role === 'karyawan'
+        return $user->hasRole('karyawan')
             && $activity->user_id === $user->id;
     }
 
-    // Hapus activity
     public function delete(User $user, Activity $activity): bool
     {
-        return $user->role === 'admin';
+        return $user->hasRole('admin');
     }
 
     public function restore(User $user, Activity $activity): bool
     {
-        return $user->role === 'admin';
+        return $user->hasRole('admin');
     }
 
     public function forceDelete(User $user, Activity $activity): bool
     {
-        return $user->role === 'admin';
+        return $user->hasRole('admin');
+    }
+
+    private function isManagedProjectActivity(
+        User $user,
+        Activity $activity
+    ): bool {
+        if (! $activity->project_id) {
+            return false;
+        }
+
+        return $activity->project
+            && $activity->project->project_manager_id === $user->id
+            && $activity->project->assignments()
+                ->where('user_id', $activity->user_id)
+                ->where('status', 'aktif')
+                ->exists();
     }
 }

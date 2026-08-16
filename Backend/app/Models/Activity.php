@@ -15,6 +15,7 @@ class Activity extends Model implements HasMedia
 
     protected $fillable = [
         'user_id',
+        'project_id',
         'title',
         'description',
         'status',
@@ -30,6 +31,11 @@ class Activity extends Model implements HasMedia
         return $this->belongsTo(User::class);
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('activity_files')
@@ -41,6 +47,7 @@ class Activity extends Model implements HasMedia
         return LogOptions::defaults()
             ->logOnly([
                 'user_id',
+                'project_id',
                 'title',
                 'description',
                 'status',
