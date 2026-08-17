@@ -10,8 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Login
-Route::post('/login', [AuthController::class, 'login']);
-
+// Membatasi percobaan login untuk mengurangi risiko brute-force.
+// Maksimal 5 percobaan dalam periode 1 menit.
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:5,1');
+    
 // Semua route di bawah wajib login
 Route::middleware('auth:sanctum')->group(function () {
 

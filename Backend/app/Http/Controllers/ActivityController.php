@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ActivityStatus;
 use App\Events\ActivityCreated;
 use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
@@ -10,6 +11,7 @@ use App\Models\ProjectAssignment;
 use App\Services\ActivityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class ActivityController extends Controller
 {
@@ -60,13 +62,25 @@ class ActivityController extends Controller
             'user_id' => 'required|exists:users,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'nullable|string|max:50',
+
+            // Status hanya boleh menggunakan nilai
+            // yang sudah didefinisikan oleh enum.
+            'status' => [
+                'nullable',
+                Rule::enum(ActivityStatus::class),
+            ],
+
             'activity_date' => 'required|date',
         ]);
 
         $user = $request->user();
 
-        // Karyawan hanya dapat membuat activity untuk dirinya sendiri.
+        /*
+         * KARYAWAN
+         *
+         * user_id dari request tidak dipercaya.
+         * Activity selalu dibuat atas nama user yang sedang login.
+         */
         if ($user->hasRole('karyawan')) {
             $data['user_id'] = $user->id;
 
@@ -84,8 +98,12 @@ class ActivityController extends Controller
             }
         }
 
-        // Project Manager hanya dapat membuat activity
-        // pada project yang dikelolanya sendiri.
+        /*
+         * PROJECT MANAGER
+         *
+         * PM hanya boleh membuat activity pada project
+         * yang memang dikelolanya.
+         */
         if ($user->hasRole('project_manager')) {
             $projectOwned = Project::where('id', $data['project_id'])
                 ->where('project_manager_id', $user->id)
@@ -96,8 +114,32 @@ class ActivityController extends Controller
                     'message' => 'Anda bukan Project Manager dari project ini.',
                 ], 403);
             }
+
+            /*
+             * PM hanya boleh membuat activity untuk karyawan
+             * yang memang aktif ditugaskan pada project tersebut.
+             *
+             * Ini mencegah PM memasukkan user_id sembarang
+             * selama user tersebut memang ada di database.
+             */
+            $assigned = ProjectAssignment::where('project_id', $data['project_id'])
+                ->where('user_id', $data['user_id'])
+                ->where('status', 'aktif')
+                ->exists();
+
+            if (! $assigned) {
+                return response()->json([
+                    'message' => 'Karyawan tersebut tidak ditugaskan ke project ini.',
+                ], 403);
+            }
         }
 
+        /*
+         * ADMIN
+         *
+         * Admin tetap diperbolehkan membuat activity
+         * untuk user/project sesuai kebutuhan administrasi.
+         */
         $activity = $this->service->create($data);
 
         // Kirim event setelah activity berhasil dibuat.
@@ -130,20 +172,33 @@ class ActivityController extends Controller
             'user_id' => 'sometimes|exists:users,id',
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|string|max:50',
+
+            // Status saat update harus berasal dari enum.
+            'status' => [
+                'sometimes',
+                Rule::enum(ActivityStatus::class),
+            ],
+
             'activity_date' => 'sometimes|date',
         ]);
 
         $user = $request->user();
 
-        // Karyawan tidak boleh memindahkan activity
-        // ke user atau project lain.
+        /*
+         * KARYAWAN
+         *
+         * Karyawan tidak boleh memindahkan activity
+         * ke user atau project lain.
+         */
         if ($user->hasRole('karyawan')) {
             $data['user_id'] = $activity->user_id;
             $data['project_id'] = $activity->project_id;
 
             if ($activity->project_id) {
-                $assigned = ProjectAssignment::where('project_id', $activity->project_id)
+                $assigned = ProjectAssignment::where(
+                    'project_id',
+                    $activity->project_id
+                )
                     ->where('user_id', $user->id)
                     ->where('status', 'aktif')
                     ->exists();
@@ -156,9 +211,15 @@ class ActivityController extends Controller
             }
         }
 
-        // Project Manager hanya boleh update activity
-        // dari project yang dikelolanya.
+        /*
+         * PROJECT MANAGER
+         *
+         * PM hanya boleh mengubah activity pada project
+         * yang memang dikelolanya.
+         */
         if ($user->hasRole('project_manager')) {
+            // Gunakan project baru jika dikirim,
+            // jika tidak gunakan project activity saat ini.
             $projectId = $data['project_id'] ?? $activity->project_id;
 
             $projectOwned = Project::where('id', $projectId)
@@ -170,8 +231,44 @@ class ActivityController extends Controller
                     'message' => 'Anda bukan Project Manager dari project ini.',
                 ], 403);
             }
+
+            /*
+             * Tentukan user yang akan menjadi pemilik activity.
+             *
+             * Jika user_id tidak dikirim, gunakan user activity
+             * yang sekarang.
+             */
+            $targetUserId = $data['user_id'] ?? $activity->user_id;
+
+            /*
+             * PM hanya boleh mengubah activity untuk karyawan
+             * yang aktif ditugaskan pada project tersebut.
+             */
+            $assigned = ProjectAssignment::where('project_id', $projectId)
+                ->where('user_id', $targetUserId)
+                ->where('status', 'aktif')
+                ->exists();
+
+            if (! $assigned) {
+                return response()->json([
+                    'message' => 'Karyawan tersebut tidak ditugaskan ke project ini.',
+                ], 403);
+            }
+
+            /*
+             * Pastikan user_id dan project_id yang digunakan
+             * adalah kombinasi yang valid.
+             */
+            $data['user_id'] = $targetUserId;
+            $data['project_id'] = $projectId;
         }
 
+        /*
+         * ADMIN
+         *
+         * Admin tetap diperbolehkan mengubah user/project
+         * sesuai kebutuhan administrasi.
+         */
         $activity = $this->service->update($activity, $data);
 
         return response()->json([
@@ -195,6 +292,8 @@ class ActivityController extends Controller
             ], 404);
         }
 
+        // Policy memastikan hanya pemilik activity
+        // yang dapat mengupload media.
         Gate::authorize('uploadMedia', $activity);
 
         $request->validate([
@@ -233,6 +332,7 @@ class ActivityController extends Controller
             ], 404);
         }
 
+        // Policy menentukan siapa yang boleh menghapus activity.
         Gate::authorize('delete', $activity);
 
         $this->service->delete($activity);
