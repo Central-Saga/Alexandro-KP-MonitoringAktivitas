@@ -20,7 +20,7 @@ class ProfileController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role,
+                'role' => $user->getRoleNames()->first(),
                 'profile_photo' => $user->profile_photo
                     ? Storage::url($user->profile_photo)
                     : null,
@@ -59,7 +59,7 @@ class ProfileController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role,
+                'role' => $user->getRoleNames()->first(),
                 'profile_photo' => $user->profile_photo
                     ? Storage::url($user->profile_photo)
                     : null,

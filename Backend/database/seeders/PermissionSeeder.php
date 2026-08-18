@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionSeeder extends Seeder
 {
@@ -16,6 +17,15 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        foreach (['admin', 'project_manager', 'karyawan'] as $role) {
+            Role::firstOrCreate([
+                'name' => $role,
+                'guard_name' => 'web',
+            ]);
+        }
+
         $permissions = [
             // Activity
             'activity.view',
@@ -111,5 +121,7 @@ class PermissionSeeder extends Seeder
             'activity.update',
             'activity.upload_media',
         ]);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

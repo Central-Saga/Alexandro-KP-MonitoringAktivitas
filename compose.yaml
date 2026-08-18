@@ -1,3 +1,18 @@
+x-backend-environment: &backend-environment
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: monitoring_aktivitas_csm
+  DB_USERNAME: postgres
+  DB_PASSWORD: postgres
+  QUEUE_CONNECTION: redis
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  REDIS_CLIENT: predis
+  REDIS_HOST: redis
+  REDIS_PASSWORD: "null"
+  REDIS_PORT: 6379
+
 services:
   postgres:
     image: postgres:17
@@ -37,13 +52,26 @@ services:
     volumes:
       - ./Backend:/var/www/html
 
-    environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: monitoring_aktivitas_csm
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
+    environment: *backend-environment
+
+    depends_on:
+      - postgres
+      - redis
+
+  queue-worker:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+
+    container_name: queue-worker-csm
+    restart: unless-stopped
+    entrypoint: ["docker-php-entrypoint"]
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--timeout=90"]
+
+    volumes:
+      - ./Backend:/var/www/html
+
+    environment: *backend-environment
 
     depends_on:
       - postgres
