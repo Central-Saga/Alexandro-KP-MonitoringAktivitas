@@ -3,10 +3,11 @@
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectAssignmentController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\UserController;
+use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Route;
 
 // Login
@@ -19,8 +20,8 @@ Route::post('/login', [AuthController::class, 'login'])
 Route::middleware('auth:sanctum')->group(function () {
 
     // User yang sedang login
-    Route::get('/user', function (Request $request) {
-        return $request->user();
+    Route::get('/user', function () {
+        return (new UserResource(request()->user()))->resolve(request());
     });
 
     // Logout
@@ -53,6 +54,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Role Management
     // Hanya Admin yang diperbolehkan mengelola role.
     Route::middleware('role:admin')->group(function () {
+        // User memakai lifecycle aktif/nonaktif; hard delete sengaja tidak
+        // disediakan agar histori dan relasi bisnis tetap terjaga.
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::patch('/users/{user}/status', [UserController::class, 'updateStatus']);
+        Route::get('/users/{user}', [UserController::class, 'show']);
+        Route::put('/users/{user}', [UserController::class, 'update']);
+
         Route::get('/roles', [RoleController::class, 'index']);
         Route::post('/roles', [RoleController::class, 'store']);
         Route::get('/roles/{id}', [RoleController::class, 'show']);

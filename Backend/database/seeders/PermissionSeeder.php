@@ -51,6 +51,12 @@ class PermissionSeeder extends Seeder
             'role.create',
             'role.update',
             'role.delete',
+
+            // User Management
+            'user.view',
+            'user.create',
+            'user.update',
+            'user.deactivate',
         ];
 
         /**

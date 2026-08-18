@@ -8,12 +8,17 @@ use App\Http\Resources\RoleResource;
 use App\Models\User;
 use App\Services\RoleService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    private const SYSTEM_ROLES = [
+        'admin',
+        'project_manager',
+        'karyawan',
+    ];
+
     public function __construct(
         protected RoleService $service
     ) {}
@@ -118,6 +123,15 @@ class RoleController extends Controller
         // struktur akses aplikasi.
         $data = $request->validated();
 
+        if (
+            in_array($role->name, self::SYSTEM_ROLES, true)
+            && $data['name'] !== $role->name
+        ) {
+            return response()->json([
+                'message' => 'Nama role bawaan sistem tidak dapat diubah.',
+            ], 422);
+        }
+
         // Jika permission dikirim, pastikan permission
         // menggunakan guard yang sama.
         if (array_key_exists('permissions', $data)) {
@@ -178,11 +192,7 @@ class RoleController extends Controller
         }
 
         // Jangan izinkan role sistem utama dihapus.
-        if (in_array($role->name, [
-            'admin',
-            'project_manager',
-            'karyawan',
-        ])) {
+        if (in_array($role->name, self::SYSTEM_ROLES, true)) {
             return response()->json([
                 'message' => 'Role bawaan sistem tidak dapat dihapus.',
             ], 422);

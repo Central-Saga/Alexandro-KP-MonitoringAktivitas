@@ -23,9 +23,8 @@ class UpdateRoleRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Mengambil ID role dari parameter route:
-        // /api/roles/{role}
-        $roleId = $this->route('role');
+        // Route API menggunakan /api/roles/{id}.
+        $roleId = $this->route('id');
 
         return [
             // Nama role wajib diisi dan harus unik.

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +19,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (
+            ! $user
+            || ! $user->is_active
+            || ! Hash::check($request->password, $user->password)
+        ) {
+            // Akun nonaktif memakai respons kredensial yang sama agar status
+            // internal akun tidak dapat ditebak dari endpoint publik.
             throw ValidationException::withMessages([
                 'email' => ['Kredensial yang diberikan salah.'],
             ]);
@@ -31,12 +38,7 @@ class AuthController extends Controller
             'message' => 'Login berhasil',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->getRoleNames()->first(),
-            ]
+            'user' => (new UserResource($user))->resolve($request),
         ]);
     }
 

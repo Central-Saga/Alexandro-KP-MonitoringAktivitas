@@ -4,8 +4,29 @@
 // useState digunakan untuk menyimpan data yang berubah
 // ketika pengguna berinteraksi dengan halaman.
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  DASHBOARD_BY_ROLE,
+  getApiUrl,
+  type AuthUser,
+} from "./lib/auth";
+import { useAuth } from "./components/auth-provider";
+import {
+  firstFieldError,
+  parseLaravelError,
+} from "./lib/validation";
+
+type LoginResponse = {
+  message: string;
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+};
 
 export default function Home() {
+  const router = useRouter();
+  const { login } = useAuth();
+
   // Menyimpan nilai email yang dimasukkan pengguna.
   const [email, setEmail] = useState("");
 
@@ -20,30 +41,101 @@ export default function Home() {
 
   // Menyimpan pesan error untuk email.
 // Jika tidak ada error, nilainya adalah string kosong.
-const [emailError, setEmailError] = useState("");
+  const [emailError, setEmailError] = useState("");
 
 // Menyimpan pesan error untuk password.
 // Jika tidak ada error, nilainya adalah string kosong.
-const [passwordError, setPasswordError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  // Menyimpan error umum dari API atau jaringan.
+  const [loginError, setLoginError] = useState("");
 
 // Menyimpan status proses login.
 // Nanti state ini juga akan digunakan ketika
 // proses login sudah terhubung dengan Laravel.
-const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fungsi sementara ketika form login dikirim.
-  // Nanti fungsi ini akan kita sambungkan ke Laravel API.
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     // Mencegah halaman melakukan reload.
     event.preventDefault();
 
-    // Untuk sementara kita tampilkan data di console.
-    // Ini akan diganti dengan proses login Laravel.
-    console.log({
-      email,
-      password,
-      rememberMe,
-    });
+    const normalizedEmail = email.trim();
+    let isValid = true;
+
+    setEmailError("");
+    setPasswordError("");
+    setLoginError("");
+
+    if (!normalizedEmail) {
+      setEmailError("Email wajib diisi.");
+      isValid = false;
+    } else if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setEmailError("Format email tidak valid.");
+      isValid = false;
+    }
+
+    if (!password) {
+      setPasswordError("Password wajib diisi.");
+      isValid = false;
+    }
+
+    if (!isValid) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(getApiUrl("/api/login"), {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+        }),
+      });
+
+      const data: unknown = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const error = parseLaravelError(data);
+
+        setEmailError(firstFieldError(error.errors, "email"));
+        setPasswordError(firstFieldError(error.errors, "password"));
+        setLoginError(
+          response.status >= 500
+            ? "Server sedang bermasalah. Silakan coba lagi."
+            : error.message ?? "Login gagal. Periksa kembali data Anda.",
+        );
+        return;
+      }
+
+      const result = data as LoginResponse;
+
+      if (!result.access_token || !result.user) {
+        setLoginError("Respons login tidak valid atau role tidak dikenali.");
+        return;
+      }
+
+      const destination = DASHBOARD_BY_ROLE[result.user.role];
+
+      if (!destination) {
+        setLoginError("Respons login tidak valid atau role tidak dikenali.");
+        return;
+      }
+
+      login(result.access_token, result.user, rememberMe);
+      router.replace(destination);
+    } catch {
+      setLoginError(
+        "Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -154,13 +246,23 @@ const [isLoading, setIsLoading] = useState(false);
                 // Mengubah state email ketika pengguna mengetik.
                 onChange={(event) => setEmail(event.target.value)}
 
+                onInput={() => setEmailError("")}
+
                 placeholder="Masukkan email"
 
                 // Email wajib diisi.
                 required
 
                 className="h-[61px] w-full rounded-[10px] border border-[#D9E1EC] bg-white px-5 text-[17px] text-[#172B4D] outline-none transition placeholder:text-[#9AA9BC] focus:border-[#43A956] focus:ring-2 focus:ring-[#43A956]/15"
+                aria-invalid={Boolean(emailError)}
+                aria-describedby={emailError ? "email-error" : undefined}
               />
+
+              {emailError && (
+                <p id="email-error" className="mt-2 text-sm text-red-600">
+                  {emailError}
+                </p>
+              )}
 
             </div>
 
@@ -193,11 +295,15 @@ const [isLoading, setIsLoading] = useState(false);
                   // Mengubah state password.
                   onChange={(event) => setPassword(event.target.value)}
 
+                  onInput={() => setPasswordError("")}
+
                   placeholder="Masukkan password"
 
                   required
 
                   className="h-[61px] w-full rounded-[10px] border border-[#D9E1EC] bg-white px-5 pr-14 text-[17px] text-[#172B4D] outline-none transition placeholder:text-[#9AA9BC] focus:border-[#43A956] focus:ring-2 focus:ring-[#43A956]/15"
+                  aria-invalid={Boolean(passwordError)}
+                  aria-describedby={passwordError ? "password-error" : undefined}
                 />
 
                 {/* Tombol show/hide password. */}
@@ -242,6 +348,12 @@ const [isLoading, setIsLoading] = useState(false);
 
               </div>
 
+              {passwordError && (
+                <p id="password-error" className="mt-2 text-sm text-red-600">
+                  {passwordError}
+                </p>
+              )}
+
             </div>
 
             {/* =================================================
@@ -254,6 +366,8 @@ const [isLoading, setIsLoading] = useState(false);
               <label className="flex cursor-pointer items-center gap-2 text-[17px] text-[#60738F]">
 
                 <input
+                  id="remember-me"
+                  name="remember_me"
                   type="checkbox"
                   checked={rememberMe}
 
@@ -273,7 +387,9 @@ const [isLoading, setIsLoading] = useState(false);
                   Untuk sementara belum diarahkan ke halaman lain. */}
               <button
                 type="button"
-                className="text-[17px] font-medium text-[#43A956] hover:text-[#318B42]"
+                disabled
+                title="Fitur lupa password belum tersedia"
+                className="cursor-not-allowed text-[17px] font-medium text-[#43A956] opacity-70"
               >
                 Lupa password?
               </button>
@@ -297,9 +413,13 @@ const [isLoading, setIsLoading] = useState(false);
   {isLoading ? "Memproses..." : "Masuk"}
 </button>
 
-          </form>
+            {loginError && (
+              <p role="alert" className="text-center text-sm text-red-600">
+                {loginError}
+              </p>
+            )}
 
-          {">"}
+          </form>
 
         </div>
 
