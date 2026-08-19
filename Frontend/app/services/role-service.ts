@@ -22,6 +22,7 @@ export type RolePayload = {
 };
 
 type RoleCollectionResponse = { data: Role[] };
+type PermissionCollectionResponse = { data: Permission[] };
 type RoleResponse = { data: Role };
 type RoleMutationResponse = { message: string; data: Role };
 
@@ -30,13 +31,16 @@ export async function getRoles(): Promise<Role[]> {
   return response.data ?? [];
 }
 
+export async function getPermissions(): Promise<Permission[]> {
+  const response = await apiGet<PermissionCollectionResponse>("/api/permissions");
+  return response.data ?? [];
+}
+
 export function getRole(id: number): Promise<RoleResponse> {
   return apiGet<RoleResponse>(`/api/roles/${id}`);
 }
 
 export function createRole(payload: RolePayload): Promise<RoleMutationResponse> {
-  // Method tetap mengikuti kontrak backend nyata, tetapi UI baru boleh
-  // memanggilnya setelah katalog permission lengkap tersedia.
   return apiPost<RoleMutationResponse>("/api/roles", payload);
 }
 

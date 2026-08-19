@@ -5,7 +5,9 @@ import { useRoles } from "../../hooks/use-roles";
 import { ApiError } from "../../lib/api-client";
 import { firstFieldError, parseLaravelError } from "../../lib/validation";
 import {
+  createRole,
   deleteRole,
+  getPermissions,
   getRole,
   updateRole,
   type Permission,
@@ -16,7 +18,7 @@ import { AdminIcon } from "./admin-icons";
 // Role sistem menjadi bagian dari kontrak authorization aplikasi.
 // UI tidak menawarkan rename/delete yang dapat merusak middleware RBAC.
 const systemRoleNames = new Set(["admin", "project_manager", "karyawan"]);
-type DialogState = { type: "view" | "edit" | "delete"; role: Role } | null;
+type DialogState = { type: "create" } | { type: "view" | "edit" | "delete"; role: Role } | null;
 
 export default function RoleManagement() {
   const { data: roles, isLoading, error, refetch } = useRoles();
@@ -26,6 +28,32 @@ export default function RoleManagement() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [permissionCatalog, setPermissionCatalog] = useState<Permission[]>([]);
+  const [isPermissionLoading, setIsPermissionLoading] = useState(true);
+  const [permissionError, setPermissionError] = useState("");
+  const [permissionVersion, setPermissionVersion] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    // Backend tetap menjadi source of truth. Kegagalan request tidak diganti
+    // dengan daftar hardcoded karena dapat membuat assignment permission drift.
+    void getPermissions()
+      .then((permissions) => {
+        if (active) setPermissionCatalog(permissions);
+      })
+      .catch((requestError) => {
+        if (active) {
+          setPermissionCatalog([]);
+          setPermissionError(errorMessage(requestError, "Katalog permission gagal dimuat."));
+        }
+      })
+      .finally(() => {
+        if (active) setIsPermissionLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [permissionVersion]);
 
   const filteredRoles = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -33,6 +61,14 @@ export default function RoleManagement() {
       ? roles.filter((role) => role.name.toLowerCase().includes(query))
       : roles;
   }, [roles, search]);
+
+  const permissionCatalogReady = !isPermissionLoading && !permissionError && permissionCatalog.length > 0;
+
+  function retryPermissionCatalog() {
+    setIsPermissionLoading(true);
+    setPermissionError("");
+    setPermissionVersion((current) => current + 1);
+  }
 
   async function openDetail(type: "view" | "edit", role: Role) {
     // Detail dimuat ulang sebelum view/edit agar form tidak memakai
@@ -60,16 +96,14 @@ export default function RoleManagement() {
             {isLoading ? "Memuat role..." : `${roles.length} role terdaftar`}
           </p>
         </div>
-        {/* Create dinonaktifkan karena backend belum menyediakan katalog
-            permission lengkap untuk membangun pilihan yang valid. */}
-        <button type="button" disabled title="Katalog seluruh permission belum tersedia dari backend" className="inline-flex h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#18a84f] px-5 text-sm font-semibold text-white opacity-60 sm:self-auto">
+        <button type="button" disabled={!permissionCatalogReady} onClick={() => { setSuccessMessage(""); setDialog({ type: "create" }); }} title={!permissionCatalogReady ? "Katalog permission belum siap" : undefined} className="inline-flex h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#18a84f] px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto">
           <span className="text-xl leading-none">+</span> Tambah Role
         </button>
       </header>
 
-      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        Pembuatan role dan pengubahan permission menunggu endpoint katalog permission lengkap. Permission yang tampil di bawah adalah data real yang telah terpasang pada role.
-      </p>
+      {isPermissionLoading && <p role="status" className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">Memuat katalog permission...</p>}
+      {permissionError && <div role="alert" className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between"><span>{permissionError}</span><button type="button" onClick={retryPermissionCatalog} className="self-start font-semibold underline sm:self-auto">Coba Lagi</button></div>}
+      {!isPermissionLoading && !permissionError && permissionCatalog.length === 0 && <div role="alert" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between"><span>Katalog permission kosong. Pembuatan dan edit role belum dapat digunakan.</span><button type="button" onClick={retryPermissionCatalog} className="self-start font-semibold underline sm:self-auto">Muat Ulang</button></div>}
       {successMessage && <p role="status" className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{successMessage}</p>}
 
       <section className="overflow-hidden rounded-2xl border border-[#dce4ec] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
@@ -90,21 +124,22 @@ export default function RoleManagement() {
         ) : (
           <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3 sm:p-6">
             {filteredRoles.map((role) => (
-              <RoleCard key={role.id} role={role} onView={() => void openDetail("view", role)} onEdit={() => void openDetail("edit", role)} onDelete={() => { setActionMessage(""); setDialog({ type: "delete", role }); }} />
+              <RoleCard key={role.id} role={role} permissionCatalogReady={permissionCatalogReady} onView={() => void openDetail("view", role)} onEdit={() => void openDetail("edit", role)} onDelete={() => { setActionMessage(""); setDialog({ type: "delete", role }); }} />
             ))}
             {filteredRoles.length === 0 && <p className="col-span-full py-12 text-center text-sm text-[#71829a]">Tidak ada role yang cocok dengan pencarian.</p>}
           </div>
         )}
       </section>
 
+      {dialog?.type === "create" && <RoleFormDialog mode="create" role={null} permissions={permissionCatalog} isLoading={false} loadMessage="" onClose={() => setDialog(null)} onSaved={(message) => { setDialog(null); setSuccessMessage(message); refetch(); }} />}
       {dialog?.type === "view" && <ViewDialog role={detail} isLoading={isDetailLoading} message={actionMessage} onClose={() => setDialog(null)} />}
-      {dialog?.type === "edit" && <EditDialog key={detail?.id ?? "loading"} role={detail} isLoading={isDetailLoading} loadMessage={actionMessage} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); setSuccessMessage("Role berhasil diperbarui."); refetch(); }} />}
+      {dialog?.type === "edit" && <RoleFormDialog key={detail?.id ?? "loading"} mode="edit" role={detail} permissions={permissionCatalog} isLoading={isDetailLoading} loadMessage={actionMessage} onClose={() => setDialog(null)} onSaved={(message) => { setDialog(null); setSuccessMessage(message); refetch(); }} />}
       {dialog?.type === "delete" && <DeleteDialog role={dialog.role} onClose={() => setDialog(null)} onDeleted={() => { setDialog(null); setSuccessMessage("Role berhasil dihapus."); refetch(); }} />}
     </main>
   );
 }
 
-function RoleCard({ role, onView, onEdit, onDelete }: { role: Role; onView: () => void; onEdit: () => void; onDelete: () => void }) {
+function RoleCard({ role, permissionCatalogReady, onView, onEdit, onDelete }: { role: Role; permissionCatalogReady: boolean; onView: () => void; onEdit: () => void; onDelete: () => void }) {
   const system = systemRoleNames.has(role.name);
   return (
     <article className="flex min-w-0 flex-col rounded-xl border border-[#dce4ec] bg-[#f8fafc] p-5">
@@ -117,9 +152,9 @@ function RoleCard({ role, onView, onEdit, onDelete }: { role: Role; onView: () =
       {role.permissions.length > 5 && <p className="mt-2 text-xs text-[#71829a]">+{role.permissions.length - 5} permission lainnya</p>}
       <div className="mt-auto flex flex-wrap gap-2 pt-5">
         <button type="button" onClick={onView} className="rounded-lg border border-[#dce4ec] bg-white px-3 py-2 text-xs font-semibold text-[#60738f]">View</button>
-        {/* Role sistem hanya dapat dilihat sampai backend menyediakan
-            sumber permission yang aman untuk proses edit. */}
-        <button type="button" onClick={onEdit} disabled={system} title={system ? "Nama role sistem tidak dapat diubah; katalog permission belum tersedia" : undefined} className="rounded-lg border border-[#18a84f] bg-white px-3 py-2 text-xs font-semibold text-[#168c44] disabled:cursor-not-allowed disabled:opacity-50">Edit</button>
+        {/* Backend mengizinkan sinkronisasi permission role sistem, tetapi
+            nama dan delete tetap dilindungi sebagai kontrak authorization. */}
+        <button type="button" onClick={onEdit} disabled={!permissionCatalogReady} title={!permissionCatalogReady ? "Katalog permission belum siap" : undefined} className="rounded-lg border border-[#18a84f] bg-white px-3 py-2 text-xs font-semibold text-[#168c44] disabled:cursor-not-allowed disabled:opacity-50">Edit</button>
         <button type="button" onClick={onDelete} disabled={system} title={system ? "Role sistem tidak dapat dihapus" : undefined} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50">Delete</button>
       </div>
     </article>
@@ -143,14 +178,67 @@ function ViewDialog({ role, isLoading, message, onClose }: { role: Role | null; 
   return <Modal title="Detail Role" onClose={onClose}><div className="p-5 sm:p-6">{isLoading ? <p className="text-sm text-[#71829a]">Memuat detail...</p> : message ? <p role="alert" className="text-sm text-red-600">{message}</p> : role && <><h4 className="text-lg font-bold text-[#172b4d]">{formatRoleName(role.name)}</h4><p className="mt-1 text-sm text-[#71829a]">{role.permissions.length} permission</p><div className="mt-5 space-y-5">{groupPermissions(role.permissions).map(([group, permissions]) => <section key={group}><h5 className="text-sm font-semibold capitalize text-[#172b4d]">{group}</h5><PermissionBadges permissions={permissions} /></section>)}</div></>}</div></Modal>;
 }
 
-function EditDialog({ role, isLoading, loadMessage, onClose, onSaved }: { role: Role | null; isLoading: boolean; loadMessage: string; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState(role?.name ?? ""); const [fieldError, setFieldError] = useState(""); const [message, setMessage] = useState(""); const [saving, setSaving] = useState(false);
-  // Edit saat ini hanya mengirim nama. Field permissions sengaja tidak
-  // dikirim supaya daftar permission existing tidak terhapus secara tidak sengaja.
-  // Error 422 tetap dipetakan ke field nama agar hasil validasi backend
-  // tampil pada input yang tepat, bukan hanya sebagai pesan umum.
-  async function submit(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const normalized = name.trim(); setFieldError(""); setMessage(""); if (!normalized) { setFieldError("Nama role wajib diisi."); return; } if (!role || normalized === role.name) { setMessage("Tidak ada perubahan untuk disimpan."); return; } setSaving(true); try { await updateRole(role.id, { name: normalized }); onSaved(); } catch (requestError) { const validation = parseLaravelError(requestError instanceof ApiError ? requestError.data : null); setFieldError(firstFieldError(validation.errors, "name")); setMessage(errorMessage(requestError, "Role gagal diperbarui.")); } finally { setSaving(false); } }
-  return <Modal title="Edit Role Custom" onClose={onClose}><div className="p-5 sm:p-6">{isLoading ? <p className="text-sm text-[#71829a]">Memuat detail...</p> : loadMessage ? <p role="alert" className="text-sm text-red-600">{loadMessage}</p> : role && <form onSubmit={submit}><label htmlFor="role-name" className="text-sm font-semibold text-[#172b4d]">Nama Role</label><input id="role-name" name="name" autoFocus required value={name} onChange={(event) => { setName(event.target.value); setFieldError(""); }} aria-invalid={Boolean(fieldError)} aria-describedby={fieldError ? "role-name-error" : undefined} className="mt-2 h-11 w-full rounded-xl border border-[#dce4ec] px-4 outline-none focus:border-[#18a84f] focus:ring-2 focus:ring-[#18a84f]/20" />{fieldError && <p id="role-name-error" className="mt-2 text-sm text-red-600">{fieldError}</p>}<p className="mt-4 text-xs text-[#71829a]">Permission tidak diubah karena katalog permission lengkap belum tersedia.</p>{message && <p role="alert" className="mt-3 text-sm text-red-600">{message}</p>}<div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border border-[#dce4ec] px-4 py-2.5 text-sm font-semibold text-[#60738f]">Batal</button><button type="submit" disabled={saving} className="rounded-xl bg-[#18a84f] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Menyimpan..." : "Simpan"}</button></div></form>}</div></Modal>;
+function RoleFormDialog({ mode, role, permissions, isLoading, loadMessage, onClose, onSaved }: { mode: "create" | "edit"; role: Role | null; permissions: Permission[]; isLoading: boolean; loadMessage: string; onClose: () => void; onSaved: (message: string) => void }) {
+  const [name, setName] = useState(role?.name ?? "");
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role?.permissions.map((permission) => permission.name) ?? []);
+  const [nameError, setNameError] = useState("");
+  const [permissionError, setPermissionError] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const compatiblePermissions = permissions.filter((permission) => permission.guard_name === (role?.guard_name ?? "web"));
+  const system = mode === "edit" && role !== null && systemRoleNames.has(role.name);
+
+  function togglePermission(permissionName: string) {
+    setSelectedPermissions((current) => current.includes(permissionName)
+      ? current.filter((name) => name !== permissionName)
+      : [...current, permissionName]);
+    setPermissionError("");
+  }
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedName = name.trim();
+    setNameError("");
+    setPermissionError("");
+    setMessage("");
+
+    if (!normalizedName) {
+      setNameError("Nama role wajib diisi.");
+      return;
+    }
+
+    if (mode === "edit" && !role) return;
+
+    const currentPermissions = role?.permissions.map((permission) => permission.name).sort() ?? [];
+    const nextPermissions = [...selectedPermissions].sort();
+    if (mode === "edit" && role && normalizedName === role.name && arraysEqual(currentPermissions, nextPermissions)) {
+      setMessage("Tidak ada perubahan untuk disimpan.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Nama permission dikirim sesuai kontrak backend; ID hanya digunakan
+      // sebagai key tampilan dan bukan sebagai sumber authorization.
+      const response = mode === "create"
+        ? await createRole({ name: normalizedName, permissions: selectedPermissions })
+        : await updateRole(role!.id, { name: normalizedName, permissions: selectedPermissions });
+      onSaved(response.message);
+    } catch (requestError) {
+      const validation = parseLaravelError(requestError instanceof ApiError ? requestError.data : null);
+      setNameError(firstFieldError(validation.errors, "name"));
+      setPermissionError(firstPermissionError(validation.errors));
+      setMessage(errorMessage(requestError, mode === "create" ? "Role gagal dibuat." : "Role gagal diperbarui."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <Modal title={mode === "create" ? "Tambah Role" : system ? "Edit Permission Role Sistem" : "Edit Role Custom"} onClose={onClose}><div className="p-5 sm:p-6">{isLoading ? <p className="text-sm text-[#71829a]">Memuat detail...</p> : loadMessage ? <p role="alert" className="text-sm text-red-600">{loadMessage}</p> : (mode === "create" || role) && <form onSubmit={submit} className="space-y-5"><div><label htmlFor={`${mode}-role-name`} className="text-sm font-semibold text-[#172b4d]">Nama Role</label><input id={`${mode}-role-name`} name="name" autoFocus={!system} required readOnly={system} value={name} onChange={(event) => { setName(event.target.value); setNameError(""); }} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? `${mode}-role-name-error` : system ? `${mode}-role-name-help` : undefined} className="mt-2 h-11 w-full rounded-xl border border-[#dce4ec] px-4 outline-none read-only:cursor-not-allowed read-only:bg-[#f3f5f8] focus:border-[#18a84f] focus:ring-2 focus:ring-[#18a84f]/20" />{system && <p id={`${mode}-role-name-help`} className="mt-2 text-xs text-[#71829a]">Nama role sistem dikunci karena digunakan oleh middleware authorization.</p>}{nameError && <p id={`${mode}-role-name-error`} className="mt-2 text-sm text-red-600">{nameError}</p>}</div><PermissionSelector permissions={compatiblePermissions} selected={selectedPermissions} disabled={saving} error={permissionError} onToggle={togglePermission} />{message && <p role="alert" className="text-sm text-red-600">{message}</p>}<div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border border-[#dce4ec] px-4 py-2.5 text-sm font-semibold text-[#60738f]">Batal</button><button type="submit" disabled={saving} className="rounded-xl bg-[#18a84f] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Menyimpan..." : mode === "create" ? "Tambah Role" : "Simpan"}</button></div></form>}</div></Modal>;
+}
+
+function PermissionSelector({ permissions, selected, disabled, error, onToggle }: { permissions: Permission[]; selected: string[]; disabled: boolean; error: string; onToggle: (name: string) => void }) {
+  return <fieldset disabled={disabled} aria-describedby={error ? "role-permissions-error" : undefined}><legend className="text-sm font-semibold text-[#172b4d]">Permissions</legend><p className="mt-1 text-xs text-[#71829a]">Pilih scope akses yang diperlukan role.</p>{permissions.length === 0 ? <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Tidak ada permission untuk guard role ini.</p> : <div className="mt-3 space-y-4">{groupPermissions(permissions).map(([group, groupItems]) => <section key={group} className="rounded-xl border border-[#dce4ec] p-4"><h4 className="text-sm font-semibold capitalize text-[#172b4d]">{group}</h4><div className="mt-3 grid gap-2 sm:grid-cols-2">{groupItems.map((permission) => <label key={permission.id} className="flex cursor-pointer items-start gap-3 rounded-lg bg-[#f8fafc] px-3 py-2.5 text-sm text-[#60738f]"><input type="checkbox" checked={selected.includes(permission.name)} onChange={() => onToggle(permission.name)} className="mt-0.5 h-4 w-4 accent-[#18a84f]" /><span className="min-w-0 break-all">{permission.name}</span></label>)}</div></section>)}</div>}{error && <p id="role-permissions-error" className="mt-2 text-sm text-red-600">{error}</p>}</fieldset>;
 }
 
 function DeleteDialog({ role, onClose, onDeleted }: { role: Role; onClose: () => void; onDeleted: () => void }) {
@@ -164,7 +252,9 @@ function DeleteDialog({ role, onClose, onDeleted }: { role: Role; onClose: () =>
 // Permission dikelompokkan berdasarkan prefix agar admin dapat memahami
 // scope fitur tanpa frontend mengarang kategori atau permission baru.
 function groupPermissions(permissions: Permission[]) { const groups = new Map<string, Permission[]>(); permissions.forEach((permission) => { const group = permission.name.split(".")[0] || "lainnya"; groups.set(group, [...(groups.get(group) ?? []), permission]); }); return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right)); }
+function arraysEqual(left: string[], right: string[]) { return left.length === right.length && left.every((value, index) => value === right[index]); }
+function firstPermissionError(errors: Record<string, string[]> | undefined) { if (!errors) return ""; const direct = firstFieldError(errors, "permissions"); if (direct) return direct; return Object.entries(errors).find(([field]) => field.startsWith("permissions."))?.[1]?.[0] ?? ""; }
 function formatRoleName(name: string) { return name.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
 // Pesan fallback dibedakan berdasarkan status supaya kegagalan authorization,
 // data hilang, dan gangguan server tidak terlihat seperti validation error biasa.
-function errorMessage(error: unknown, fallback: string) { if (!(error instanceof ApiError)) return "Tidak dapat terhubung ke server."; if (error.status === 403) return "Anda tidak memiliki izin untuk melakukan tindakan ini."; if (error.status === 404) return "Role tidak ditemukan."; if (error.status >= 500) return "Server sedang bermasalah. Silakan coba lagi."; return error.message || fallback; }
+function errorMessage(error: unknown, fallback: string) { if (!(error instanceof ApiError)) return "Tidak dapat terhubung ke server."; if (error.status === 401) return "Sesi tidak valid. Silakan login kembali."; if (error.status === 403) return "Anda tidak memiliki izin untuk melakukan tindakan ini."; if (error.status === 404) return "Role tidak ditemukan."; if (error.status >= 500) return "Server sedang bermasalah. Silakan coba lagi."; return error.message || fallback; }
