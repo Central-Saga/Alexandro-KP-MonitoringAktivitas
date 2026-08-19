@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\QueryCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
+    public function __construct(protected QueryCache $cache) {}
+
     /**
      * Menampilkan profile user yang sedang login.
      */
@@ -52,6 +55,13 @@ class ProfileController extends Controller
         }
 
         $user->update($data);
+
+        // Nama/foto user dapat muncul pada list user dan ringkasan activity.
+        $this->cache->invalidate(
+            QueryCache::USERS,
+            QueryCache::ACTIVITIES,
+            QueryCache::PROJECTS,
+        );
 
         return response()->json([
             'message' => 'Profile berhasil diperbarui',

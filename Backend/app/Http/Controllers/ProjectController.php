@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Support\QueryCache;
 use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
+    public function __construct(protected QueryCache $cache) {}
+
     /**
      * Menampilkan daftar project.
      *
@@ -34,9 +37,19 @@ class ProjectController extends Controller
             $query->where('project_manager_id', $user->id);
         }
 
-        return response()->json([
-            'data' => $query->latest()->get(),
-        ]);
+        $projects = $this->cache->remember(
+            QueryCache::PROJECTS,
+            [
+                'actor_id' => $user->getKey(),
+                'roles' => $user->getRoleNames()->sort()->values()->all(),
+                'sort' => 'created_at:desc',
+            ],
+            // Project belum memiliki service/repository. Cache menyimpan array
+            // scalar agar contract JSON tetap sama dan aman untuk Redis.
+            fn () => $query->latest()->get()->toArray(),
+        );
+
+        return response()->json(['data' => $projects]);
     }
 
     /**
@@ -103,6 +116,7 @@ class ProjectController extends Controller
         $data['status'] ??= 'berlangsung';
 
         $project = Project::create($data);
+        $this->cache->invalidate(QueryCache::PROJECTS);
 
         return response()->json([
             'message' => 'Project berhasil dibuat.',
@@ -153,6 +167,7 @@ class ProjectController extends Controller
         ]);
 
         $project->update($data);
+        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
         return response()->json([
             'message' => 'Project berhasil diperbarui.',
@@ -184,6 +199,7 @@ class ProjectController extends Controller
         }
 
         $project->delete();
+        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
         return response()->json([
             'message' => 'Project berhasil dihapus.',

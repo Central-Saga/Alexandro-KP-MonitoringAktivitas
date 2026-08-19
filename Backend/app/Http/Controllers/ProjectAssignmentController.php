@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\ProjectAssignment;
 use App\Models\User;
+use App\Support\QueryCache;
 use Illuminate\Http\Request;
 
 class ProjectAssignmentController extends Controller
 {
+    public function __construct(protected QueryCache $cache) {}
+
     /**
      * Menampilkan daftar karyawan yang ditugaskan
      * pada sebuah project.
@@ -127,6 +130,7 @@ class ProjectAssignmentController extends Controller
         $data['status'] ??= 'aktif';
 
         $assignment = ProjectAssignment::create($data);
+        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
         return response()->json([
             'message' => 'Karyawan berhasil ditugaskan.',
@@ -186,6 +190,7 @@ class ProjectAssignmentController extends Controller
         ]);
 
         $assignment->update($data);
+        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
         return response()->json([
             'message' => 'Penugasan berhasil diperbarui.',
@@ -241,6 +246,7 @@ class ProjectAssignmentController extends Controller
         // Yang dihapus hanya assignment,
         // bukan data user/karyawan.
         $assignment->delete();
+        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
         return response()->json([
             'message' => 'Penugasan berhasil dihapus.',

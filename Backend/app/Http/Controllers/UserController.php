@@ -20,7 +20,7 @@ class UserController extends Controller
         Gate::authorize('viewAny', User::class);
 
         return UserResource::collection(
-            $this->service->paginate($request->validated())
+            $this->service->paginate($request->user(), $request->validated())
         );
     }
 

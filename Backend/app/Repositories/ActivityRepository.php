@@ -4,33 +4,19 @@ namespace App\Repositories;
 
 use App\Models\Activity;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class ActivityRepository
 {
-    /**
-     * Mengambil daftar activity sesuai hak akses user.
-     *
-     * Karyawan hanya melihat activity miliknya.
-     * Project Manager hanya melihat activity dari project
-     * yang dikelolanya dan assignment karyawan masih aktif.
-     * Admin dapat melihat seluruh activity.
-     */
-    public function getAll(User $user): Collection
+    public function paginate(User $user, array $filters): LengthAwarePaginator
     {
-        $query = Activity::with([
-            'user',
-            'project',
-        ])->latest('activity_date');
+        $query = Activity::query()->with($this->relations());
 
-        // Karyawan hanya dapat melihat activity miliknya sendiri.
         if ($user->hasRole('karyawan')) {
             $query->where('user_id', $user->id);
         }
 
-        // Project Manager hanya dapat melihat activity
-        // dari project yang dikelolanya dan karyawan yang
-        // masih memiliki assignment aktif.
         if ($user->hasRole('project_manager')) {
             $query->whereHas('project', function ($projectQuery) use ($user) {
                 $projectQuery->where('project_manager_id', $user->id);
@@ -42,50 +28,76 @@ class ActivityRepository
             });
         }
 
-        // Admin tidak membutuhkan filter tambahan.
-        return $query->get();
+        if (! empty($filters['search'])) {
+            $search = mb_strtolower($filters['search']);
+            $query->where(function ($builder) use ($search) {
+                $builder->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
+                    ->orWhereHas('user', fn ($users) => $users
+                        ->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]));
+            });
+        }
+
+        foreach (['user_id', 'project_id', 'status'] as $field) {
+            if (! empty($filters[$field])) {
+                $query->where($field, $filters[$field]);
+            }
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('activity_date', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('activity_date', '<=', $filters['date_to']);
+        }
+
+        return $query->latest('activity_date')->latest('id')
+            ->paginate($filters['per_page'] ?? 10)->withQueryString();
     }
 
-    /**
-     * Mengambil detail activity berdasarkan ID.
-     *
-     * Relasi user dan project ikut dimuat agar
-     * ActivityResource dapat menampilkan informasinya.
-     */
     public function findById(int $id): ?Activity
     {
-        return Activity::with([
-            'user',
-            'project',
-        ])->find($id);
+        return Activity::with($this->relations())->find($id);
     }
 
-    /**
-     * Membuat activity baru.
-     */
+    public function findManyForList(array $ids): Collection
+    {
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        $activities = Activity::query()
+            ->with($this->relations())
+            ->whereKey($ids)
+            ->get()
+            ->keyBy('id');
+
+        // Urutan ID mengikuti descriptor cache agar pagination dan sorting
+        // tetap identik dengan query list awal.
+        return new Collection(array_values(array_filter(
+            array_map(fn ($id) => $activities->get($id), $ids)
+        )));
+    }
+
     public function create(array $data): Activity
     {
         return Activity::create($data);
     }
 
-    /**
-     * Memperbarui activity.
-     */
     public function update(Activity $activity, array $data): Activity
     {
         $activity->update($data);
 
-        return $activity->fresh([
-            'user',
-            'project',
-        ]);
+        return $activity->fresh($this->relations());
     }
 
-    /**
-     * Menghapus activity.
-     */
     public function delete(Activity $activity): bool
     {
         return $activity->delete();
+    }
+
+    private function relations(): array
+    {
+        return ['user', 'project', 'media'];
     }
 }

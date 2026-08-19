@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ActivityStatus;
 use App\Events\ActivityCreated;
+use App\Http\Requests\IndexActivityRequest;
 use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Models\Project;
@@ -22,12 +23,12 @@ class ActivityController extends Controller
     /**
      * Menampilkan daftar activity sesuai hak akses user.
      */
-    public function index(Request $request)
+    public function index(IndexActivityRequest $request)
     {
         Gate::authorize('viewAny', Activity::class);
 
         return ActivityResource::collection(
-            $this->service->getAll($request->user())
+            $this->service->paginate($request->user(), $request->validated())
         );
     }
 
@@ -303,6 +304,10 @@ class ActivityController extends Controller
         $media = $activity
             ->addMediaFromRequest('file')
             ->toMediaCollection('activity_files');
+
+        // Media ikut tampil pada ActivityResource list, sehingga descriptor
+        // list harus diganti setelah upload berhasil.
+        $this->service->invalidateListCache();
 
         return response()->json([
             'message' => 'File berhasil diupload',

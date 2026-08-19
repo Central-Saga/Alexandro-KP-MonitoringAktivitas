@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class UserRepository
 {
@@ -39,6 +40,51 @@ class UserRepository
     public function create(array $data): User
     {
         return User::create($data);
+    }
+
+    public function findManyForList(array $ids): Collection
+    {
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        $users = User::query()
+            ->with('roles')
+            ->whereKey($ids)
+            ->get()
+            ->keyBy('id');
+
+        return new Collection(array_values(array_filter(
+            array_map(fn ($id) => $users->get($id), $ids)
+        )));
+    }
+
+    public function findForUpdate(int $id): User
+    {
+        return User::query()->with('roles')->lockForUpdate()->findOrFail($id);
+    }
+
+    public function countActiveAdminsForUpdate(): int
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->whereHas('roles', fn ($roles) => $roles->where('name', 'admin'))
+            ->lockForUpdate()
+            ->count();
+    }
+
+    public function updateStatus(User $user, bool $isActive): User
+    {
+        $user->forceFill([
+            'is_active' => $isActive,
+            'deactivated_at' => $isActive ? null : now(),
+        ])->save();
+
+        if (! $isActive) {
+            $user->tokens()->delete();
+        }
+
+        return $user->fresh('roles');
     }
 
     public function update(User $user, array $data): User
