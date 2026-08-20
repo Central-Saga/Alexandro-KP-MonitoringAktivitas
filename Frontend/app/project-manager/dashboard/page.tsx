@@ -1,10 +1,5 @@
-import PlaceholderDashboard from "../../components/placeholder-dashboard";
-import RoleGuard from "../../components/role-guard";
+import ProjectManagerDashboard from "../components/project-manager-dashboard";
 
 export default function ProjectManagerDashboardPage() {
-  return (
-    <RoleGuard allowedRole="project_manager">
-      <PlaceholderDashboard title="Dashboard Project Manager" />
-    </RoleGuard>
-  );
+  return <ProjectManagerDashboard />;
 }

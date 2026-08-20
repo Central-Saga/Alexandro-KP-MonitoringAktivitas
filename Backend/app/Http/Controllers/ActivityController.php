@@ -60,6 +60,7 @@ class ActivityController extends Controller
 
         $data = $request->validate([
             'project_id' => 'required|exists:projects,id',
+            'project_task_id' => 'nullable|exists:project_tasks,id',
             'user_id' => 'required|exists:users,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -68,7 +69,11 @@ class ActivityController extends Controller
             // yang sudah didefinisikan oleh enum.
             'status' => [
                 'nullable',
-                Rule::enum(ActivityStatus::class),
+                Rule::in([
+                    ActivityStatus::PENDING->value,
+                    ActivityStatus::ONGOING->value,
+                    ActivityStatus::SELESAI->value,
+                ]),
             ],
 
             'activity_date' => 'required|date',
@@ -84,6 +89,11 @@ class ActivityController extends Controller
          */
         if ($user->hasRole('karyawan')) {
             $data['user_id'] = $user->id;
+
+            // Submit awal Karyawan selalu masuk antrean pending. Nilai status
+            // dari client tidak dipercaya agar API langsung tidak dapat
+            // melewati lifecycle operasional Activity.
+            $data['status'] = ActivityStatus::PENDING->value;
 
             // Pastikan karyawan memang ditugaskan
             // secara aktif pada project tersebut.
@@ -170,14 +180,20 @@ class ActivityController extends Controller
 
         $data = $request->validate([
             'project_id' => 'sometimes|exists:projects,id',
+            'project_task_id' => 'sometimes|nullable|exists:project_tasks,id',
             'user_id' => 'sometimes|exists:users,id',
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
 
-            // Status saat update harus berasal dari enum.
+            // Approval/rejection hanya boleh melalui endpoint dedicated agar
+            // actor, timestamp, reason, dan transition selalu tercatat.
             'status' => [
                 'sometimes',
-                Rule::enum(ActivityStatus::class),
+                Rule::in([
+                    ActivityStatus::PENDING->value,
+                    ActivityStatus::ONGOING->value,
+                    ActivityStatus::SELESAI->value,
+                ]),
             ],
 
             'activity_date' => 'sometimes|date',
@@ -344,6 +360,37 @@ class ActivityController extends Controller
 
         return response()->json([
             'message' => 'Aktivitas berhasil dihapus',
+        ]);
+    }
+
+    public function approve(Request $request, Activity $activity)
+    {
+        Gate::authorize('approve', $activity);
+
+        $activity = $this->service->approve($activity, $request->user());
+
+        return response()->json([
+            'message' => 'Aktivitas berhasil disetujui',
+            'data' => new ActivityResource($activity),
+        ]);
+    }
+
+    public function reject(Request $request, Activity $activity)
+    {
+        Gate::authorize('reject', $activity);
+        $data = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $activity = $this->service->reject(
+            $activity,
+            $request->user(),
+            $data['rejection_reason']
+        );
+
+        return response()->json([
+            'message' => 'Aktivitas berhasil ditolak',
+            'data' => new ActivityResource($activity),
         ]);
     }
 }

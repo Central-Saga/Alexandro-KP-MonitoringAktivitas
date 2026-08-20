@@ -29,6 +29,10 @@ class UserResource extends JsonResource
             $this->mergeWhen($managementFields, [
                 'is_active' => (bool) $this->is_active,
                 'deactivated_at' => $this->deactivated_at,
+                'division' => $this->whenLoaded('division', fn () => $this->division ? [
+                    'id' => $this->division->id,
+                    'name' => $this->division->name,
+                ] : null),
                 'created_at' => $this->created_at,
             ]),
         ];

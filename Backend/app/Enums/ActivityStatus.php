@@ -21,4 +21,7 @@ enum ActivityStatus: string
 
     // Activity sudah mendapatkan persetujuan.
     case APPROVED = 'approved';
+
+    // Activity selesai diperiksa tetapi perlu diperbaiki.
+    case REJECTED = 'rejected';
 }

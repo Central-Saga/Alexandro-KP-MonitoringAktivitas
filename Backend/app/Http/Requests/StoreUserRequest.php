@@ -22,6 +22,11 @@ class StoreUserRequest extends FormRequest
             // Assignment user dibatasi pada role aplikasi resmi. Custom role
             // tidak otomatis menjadi role operasional tanpa requirement baru.
             'role' => ['required', Rule::in(['admin', 'project_manager', 'karyawan'])],
+            'division_id' => [
+                'nullable',
+                // Assignment baru hanya boleh menuju divisi aktif.
+                Rule::exists('divisions', 'id')->where('status', 'active'),
+            ],
         ];
     }
 }

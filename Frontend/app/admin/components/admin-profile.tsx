@@ -68,8 +68,10 @@ export default function AdminProfile() {
       setName(response.data.name);
 
       try {
-        const activityResponse = await getActivities();
-        setActivities(activityResponse);
+        const activityResponse = await getActivities({ perPage: 100 });
+        // Endpoint Activity kini paginated; profil memakai data dari envelope
+        // Laravel tanpa mengubah perhitungan statistik existing.
+        setActivities(activityResponse.data);
         setActivityDataAvailable(true);
       } catch {
         setActivities([]);

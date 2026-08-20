@@ -40,7 +40,7 @@ class UserController extends Controller
     {
         Gate::authorize('view', $user);
 
-        return new UserResource($user->load('roles'));
+        return new UserResource($user->load(['roles', 'division']));
     }
 
     public function update(UpdateUserRequest $request, User $user)

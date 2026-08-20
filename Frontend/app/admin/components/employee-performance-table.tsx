@@ -4,6 +4,8 @@ export type EmployeeActivitySummary = {
   userId: number;
   total: number;
   approved: number;
+  name: string;
+  division: string | null;
 };
 
 export default function EmployeePerformanceTable({
@@ -74,12 +76,9 @@ export default function EmployeePerformanceTable({
                   className="border-b border-[#e1e7ee] last:border-0"
                 >
                   <td className="px-4 py-4">
-                    <span className="font-medium text-[#172b4d]">—</span>
-                    <span className="ml-2 text-xs text-[#91a0b3]">
-                      User ID {employee.userId}
-                    </span>
+                    <span className="font-medium text-[#172b4d]">{employee.name}</span>
                   </td>
-                  <td className="px-4 py-4 text-[#71829a]">—</td>
+                  <td className="px-4 py-4 text-[#71829a]">{employee.division ?? "—"}</td>
                   <td className="px-4 py-4 font-medium text-[#172b4d]">
                     {employee.total}
                   </td>

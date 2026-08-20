@@ -14,17 +14,22 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 #[Fillable([
     'user_id',
     'project_id',
+    'project_task_id',
     'title',
     'description',
     'status',
     'activity_date',
+    'approved_by',
+    'approved_at',
+    'rejected_by',
+    'rejected_at',
+    'rejection_reason',
 ])]
 class Activity extends Model implements HasMedia
 {
     use InteractsWithMedia, LogsActivity;
 
-  
-        /**
+    /**
      * Mendefinisikan casting atribut model.
      *
      * activity_date dikonversi menjadi date,
@@ -35,6 +40,8 @@ class Activity extends Model implements HasMedia
         return [
             'activity_date' => 'date',
             'status' => ActivityStatus::class,
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 
@@ -52,6 +59,21 @@ class Activity extends Model implements HasMedia
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function projectTask(): BelongsTo
+    {
+        return $this->belongsTo(ProjectTask::class);
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     /**
@@ -77,6 +99,7 @@ class Activity extends Model implements HasMedia
             ->logOnly([
                 'user_id',
                 'project_id',
+                'project_task_id',
                 'title',
                 'description',
                 'status',

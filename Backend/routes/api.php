@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectAssignmentController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Resources\UserResource;
@@ -16,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 // Maksimal 5 percobaan dalam periode 1 menit.
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
-    
+
 // Semua route di bawah wajib login
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -38,8 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/activities', [ActivityController::class, 'store']);
     Route::put('/activities/{id}', [ActivityController::class, 'update']);
     Route::delete('/activities/{id}', [ActivityController::class, 'destroy']);
+    Route::post('/activities/{activity}/approve', [ActivityController::class, 'approve']);
+    Route::post('/activities/{activity}/reject', [ActivityController::class, 'reject']);
 
-        // Project
+    // Project
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::get('/projects/{id}', [ProjectController::class, 'show']);
     Route::post('/projects', [ProjectController::class, 'store']);
@@ -47,12 +51,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
 
     // Project Assignments
+    Route::get('/projects/{projectId}/assignment-candidates', [ProjectAssignmentController::class, 'candidates']);
     Route::get('/projects/{projectId}/assignments', [ProjectAssignmentController::class, 'index']);
     Route::post('/projects/{projectId}/assignments', [ProjectAssignmentController::class, 'store']);
     Route::put('/projects/{projectId}/assignments/{assignmentId}', [ProjectAssignmentController::class, 'update']);
-    Route::delete('/projects/{projectId}/assignments/{assignmentId}', [ProjectAssignmentController::class, 'destroy']);
 
-        // Role Management
+    // Project Task berbeda dari membership ProjectAssignment dan memakai
+    // lifecycle status tanpa endpoint hard delete.
+    Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
+    Route::post('/project-tasks', [ProjectTaskController::class, 'store']);
+    Route::get('/project-tasks/{projectTask}', [ProjectTaskController::class, 'show']);
+    Route::put('/project-tasks/{projectTask}', [ProjectTaskController::class, 'update']);
+    Route::patch('/project-tasks/{projectTask}/status', [ProjectTaskController::class, 'updateStatus']);
+
+    // Role Management
     // Hanya Admin yang diperbolehkan mengelola role.
     Route::middleware('role:admin')->group(function () {
         // User memakai lifecycle aktif/nonaktif; hard delete sengaja tidak
@@ -63,6 +75,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/{user}', [UserController::class, 'show']);
         Route::put('/users/{user}', [UserController::class, 'update']);
 
+        // Division memakai lifecycle status; hard delete tidak diekspos agar
+        // histori membership user tetap aman.
+        Route::get('/divisions', [DivisionController::class, 'index']);
+        Route::post('/divisions', [DivisionController::class, 'store']);
+        Route::get('/divisions/options', [DivisionController::class, 'options']);
+        Route::patch('/divisions/{division}/status', [DivisionController::class, 'updateStatus']);
+        Route::get('/divisions/{division}', [DivisionController::class, 'show']);
+        Route::put('/divisions/{division}', [DivisionController::class, 'update']);
+
         Route::get('/roles', [RoleController::class, 'index']);
         Route::get('/permissions', [PermissionController::class, 'index']);
         Route::post('/roles', [RoleController::class, 'store']);
@@ -70,7 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/roles/{id}', [RoleController::class, 'update']);
         Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
     });
-    
+
     // Upload bukti aktivitas
     Route::post('/activities/{id}/media', [ActivityController::class, 'uploadMedia']);
 });

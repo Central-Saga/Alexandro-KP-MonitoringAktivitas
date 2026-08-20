@@ -9,6 +9,7 @@ const navigation: Array<{ href: string; label: string; icon: AdminIconName }> = 
   { href: "/admin/users", label: "Data User", icon: "users" },
   { href: "/admin/roles", label: "Manajemen Role", icon: "shield" },
   { href: "/admin/divisions", label: "Data Divisi", icon: "building" },
+  { href: "/admin/projects", label: "Manajemen Proyek", icon: "project" },
   { href: "/admin/activities", label: "Monitoring Aktivitas", icon: "chart" },
   { href: "/admin/reports", label: "Laporan", icon: "activity" },
   { href: "/admin/profile", label: "Profil", icon: "user" },

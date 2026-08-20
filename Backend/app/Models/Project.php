@@ -48,4 +48,14 @@ class Project extends Model
     {
         return $this->hasMany(ProjectAssignment::class);
     }
+
+    public function activeAssignments(): HasMany
+    {
+        return $this->assignments()->where('status', 'aktif');
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(ProjectTask::class);
+    }
 }

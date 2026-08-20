@@ -2,254 +2,144 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProjectAssignmentRequest;
+use App\Http\Requests\UpdateProjectAssignmentRequest;
+use App\Http\Resources\ProjectAssignmentResource;
 use App\Models\Project;
 use App\Models\ProjectAssignment;
 use App\Models\User;
 use App\Support\QueryCache;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ProjectAssignmentController extends Controller
 {
     public function __construct(protected QueryCache $cache) {}
 
-    /**
-     * Menampilkan daftar karyawan yang ditugaskan
-     * pada sebuah project.
-     *
-     * Admin dapat melihat seluruh project.
-     * Project Manager hanya dapat melihat assignment
-     * dari project yang dia kelola.
-     */
-    public function index(Request $request, int $projectId)
+    public function index(int $projectId)
     {
-        $project = Project::find($projectId);
+        $project = $this->project($projectId);
+        Gate::authorize('manageAssignments', $project);
 
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
-        }
-
-        $user = $request->user();
-
-        // Project Manager hanya boleh melihat assignment
-        // dari project yang dia kelola sendiri.
-        if (
-            $user->hasRole('project_manager') &&
-            $project->project_manager_id !== $user->id
-        ) {
-            return response()->json([
-                'message' => 'Tidak memiliki akses ke project ini.',
-            ], 403);
-        }
-
-        // Hanya Admin dan Project Manager yang dapat
-        // melihat daftar assignment.
-        if (! $user->hasAnyRole(['admin', 'project_manager'])) {
-            return response()->json([
-                'message' => 'Tidak memiliki akses.',
-            ], 403);
-        }
-
-        $assignments = ProjectAssignment::with('user')
+        $assignments = ProjectAssignment::query()
+            ->with(['user.roles', 'user.division'])
             ->where('project_id', $project->id)
             ->latest()
             ->get();
 
+        return ProjectAssignmentResource::collection($assignments);
+    }
+
+    public function candidates(int $projectId)
+    {
+        $project = $this->project($projectId);
+        Gate::authorize('manageAssignments', $project);
+
+        $users = User::query()
+            ->with('division')
+            ->where('is_active', true)
+            ->whereHas('roles', fn ($roles) => $roles->where('name', 'karyawan'))
+            ->whereDoesntHave('projectAssignments', fn ($assignments) => $assignments
+                ->where('project_id', $project->id))
+            ->orderBy('name')
+            ->get();
+
         return response()->json([
-            'data' => $assignments,
+            'data' => $users->map(fn (User $user) => [
+                // Endpoint kandidat hanya mengekspos identitas yang diperlukan
+                // selector assignment, tanpa role internal atau credential.
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'division' => $user->division ? [
+                    'id' => $user->division->id,
+                    'name' => $user->division->name,
+                ] : null,
+            ]),
         ]);
     }
 
-    /**
-     * Menugaskan seorang karyawan ke project.
-     *
-     * Hanya Project Manager pemilik project
-     * yang dapat membuat assignment.
-     */
-    public function store(Request $request, int $projectId)
+    public function store(StoreProjectAssignmentRequest $request, int $projectId)
     {
-        $project = Project::find($projectId);
+        $project = $this->project($projectId);
+        Gate::authorize('manageAssignments', $project);
 
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
-        }
-
-        $user = $request->user();
-
-        // Hanya Project Manager yang dapat membuat assignment.
-        if (! $user->hasRole('project_manager')) {
-            return response()->json([
-                'message' => 'Hanya Project Manager yang dapat membuat penugasan.',
-            ], 403);
-        }
-
-        // Pastikan PM memang pemilik project tersebut.
-        if ($project->project_manager_id !== $user->id) {
-            return response()->json([
-                'message' => 'Anda bukan Project Manager dari project ini.',
-            ], 403);
-        }
-
-        $data = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'project_role' => 'required|string|max:100',
-            'start_date' => 'required|date',
-            'status' => 'nullable|string|max:50',
-        ]);
-
-        $employee = User::find($data['user_id']);
-
-        // Hanya user dengan role Karyawan yang boleh
-        // dimasukkan sebagai anggota project.
-        if (! $employee->hasRole('karyawan')) {
-            return response()->json([
-                'message' => 'Hanya user dengan role karyawan yang dapat ditugaskan.',
-            ], 422);
-        }
-
-        // Cegah karyawan yang sama ditugaskan dua kali
-        // pada project yang sama.
-        $exists = ProjectAssignment::where('project_id', $project->id)
-            ->where('user_id', $employee->id)
+        $data = $request->validated();
+        $exists = ProjectAssignment::query()
+            ->where('project_id', $project->id)
+            ->where('user_id', $data['user_id'])
             ->exists();
 
         if ($exists) {
             return response()->json([
-                'message' => 'Karyawan sudah ditugaskan ke project ini.',
+                'message' => 'Karyawan sudah memiliki histori penugasan pada project ini. Aktifkan kembali assignment yang ada.',
+                'errors' => ['user_id' => ['Karyawan sudah ditugaskan ke project ini.']],
             ], 422);
         }
 
-        // Hubungkan assignment dengan project yang dipilih.
         $data['project_id'] = $project->id;
-
-        // Jika status tidak diberikan, assignment
-        // otomatis dianggap aktif.
         $data['status'] ??= 'aktif';
-
-        $assignment = ProjectAssignment::create($data);
-        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
+        $assignment = ProjectAssignment::query()->create($data);
+        $this->invalidateScopeCaches();
 
         return response()->json([
             'message' => 'Karyawan berhasil ditugaskan.',
-            'data' => $assignment->load('user'),
+            'data' => new ProjectAssignmentResource(
+                $assignment->load(['user.roles', 'user.division'])
+            ),
         ], 201);
     }
 
-    /**
-     * Mengubah data assignment.
-     *
-     * Hanya Project Manager pemilik project
-     * yang dapat mengubah assignment.
-     */
     public function update(
-        Request $request,
+        UpdateProjectAssignmentRequest $request,
         int $projectId,
         int $assignmentId
     ) {
-        $project = Project::find($projectId);
+        $project = $this->project($projectId);
+        Gate::authorize('manageAssignments', $project);
 
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
-        }
-
-        $user = $request->user();
-
-        // Hanya Project Manager yang dapat mengubah assignment.
-        if (! $user->hasRole('project_manager')) {
-            return response()->json([
-                'message' => 'Hanya Project Manager yang dapat mengubah penugasan.',
-            ], 403);
-        }
-
-        // PM hanya boleh mengubah assignment
-        // dari project yang dia kelola.
-        if ($project->project_manager_id !== $user->id) {
-            return response()->json([
-                'message' => 'Anda bukan Project Manager dari project ini.',
-            ], 403);
-        }
-
-        $assignment = ProjectAssignment::where('project_id', $project->id)
+        $assignment = ProjectAssignment::query()
+            ->where('project_id', $project->id)
             ->find($assignmentId);
 
-        if (! $assignment) {
-            return response()->json([
-                'message' => 'Penugasan tidak ditemukan.',
-            ], 404);
+        abort_if(! $assignment, 404, 'Penugasan tidak ditemukan.');
+        $data = $request->validated();
+
+        if (($data['status'] ?? null) === 'aktif') {
+            $employee = $assignment->user()->with('roles')->first();
+
+            if (! $employee?->is_active || ! $employee->hasRole('karyawan')) {
+                // Reactivation juga divalidasi backend karena status/role user
+                // dapat berubah setelah assignment pertama kali dibuat.
+                return response()->json([
+                    'message' => 'Assignment hanya dapat diaktifkan untuk Karyawan aktif.',
+                    'errors' => ['status' => ['Karyawan harus aktif sebelum assignment diaktifkan.']],
+                ], 422);
+            }
         }
 
-        $data = $request->validate([
-            'project_role' => 'sometimes|string|max:100',
-            'start_date' => 'sometimes|date',
-            'status' => 'sometimes|string|max:50',
-        ]);
-
         $assignment->update($data);
-        $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
+        $this->invalidateScopeCaches();
 
         return response()->json([
             'message' => 'Penugasan berhasil diperbarui.',
-            'data' => $assignment->fresh()->load('user'),
+            'data' => new ProjectAssignmentResource(
+                $assignment->fresh()->load(['user.roles', 'user.division'])
+            ),
         ]);
     }
 
-    /**
-     * Menghapus assignment dari project.
-     *
-     * Penghapusan assignment tidak menghapus akun karyawan.
-     * Hanya hubungan karyawan dengan project yang dihapus.
-     */
-    public function destroy(
-        Request $request,
-        int $projectId,
-        int $assignmentId
-    ) {
-        $project = Project::find($projectId);
+    private function project(int $id): Project
+    {
+        $project = Project::query()->find($id);
+        abort_if(! $project, 404, 'Project tidak ditemukan.');
 
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
-        }
+        return $project;
+    }
 
-        $user = $request->user();
-
-        // Hanya Project Manager yang dapat menghapus assignment.
-        if (! $user->hasRole('project_manager')) {
-            return response()->json([
-                'message' => 'Hanya Project Manager yang dapat menghapus penugasan.',
-            ], 403);
-        }
-
-        // PM hanya boleh menghapus assignment
-        // dari project yang dia kelola.
-        if ($project->project_manager_id !== $user->id) {
-            return response()->json([
-                'message' => 'Anda bukan Project Manager dari project ini.',
-            ], 403);
-        }
-
-        $assignment = ProjectAssignment::where('project_id', $project->id)
-            ->find($assignmentId);
-
-        if (! $assignment) {
-            return response()->json([
-                'message' => 'Penugasan tidak ditemukan.',
-            ], 404);
-        }
-
-        // Yang dihapus hanya assignment,
-        // bukan data user/karyawan.
-        $assignment->delete();
+    private function invalidateScopeCaches(): void
+    {
+        // Assignment aktif menentukan akses Activity karyawan/PM. Invalidasi
+        // mencegah hasil cache lama bocor setelah assignment berubah.
         $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
-
-        return response()->json([
-            'message' => 'Penugasan berhasil dihapus.',
-        ]);
     }
 }

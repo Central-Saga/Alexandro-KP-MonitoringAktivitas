@@ -47,7 +47,7 @@ class UserServiceTest extends TestCase
         $repository = Mockery::mock(UserRepository::class);
         $created = Mockery::mock(User::class);
         $created->shouldReceive('syncRoles')->once()->with('karyawan');
-        $created->shouldReceive('load')->once()->with('roles')->andReturnSelf();
+        $created->shouldReceive('load')->once()->with(['roles', 'division'])->andReturnSelf();
         $repository->shouldReceive('paginate')->twice()->andReturn($this->paginator($this->user(11)));
         $repository->shouldNotReceive('findManyForList');
         $repository->shouldReceive('create')->once()->andReturn($created);
@@ -56,7 +56,7 @@ class UserServiceTest extends TestCase
         $actor = $this->actor(1);
 
         $service->paginate($actor, []);
-        $this->assertSame($created, $service->create(['role' => 'karyawan']));
+        $this->assertSame($created, $service->create(['role' => 'karyawan', 'division_id' => null]));
         $service->paginate($actor, []);
     }
 
@@ -65,7 +65,7 @@ class UserServiceTest extends TestCase
         $repository = Mockery::mock(UserRepository::class);
         $target = Mockery::mock(User::class);
         $target->shouldReceive('syncRoles')->once()->with('project_manager');
-        $target->shouldReceive('fresh')->once()->with('roles')->andReturnSelf();
+        $target->shouldReceive('fresh')->once()->with(['roles', 'division'])->andReturnSelf();
         $repository->shouldReceive('update')->once()->with($target, ['role' => 'project_manager'])->andReturn($target);
         DB::shouldReceive('transaction')->once()->andReturnUsing(fn ($callback) => $callback());
         $cache = new QueryCache;

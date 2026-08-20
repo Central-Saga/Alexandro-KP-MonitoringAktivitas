@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Division;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -245,7 +248,7 @@ class UserManagementTest extends TestCase
         $actor = $this->makeUser('admin', ['is_active' => false]);
         $lastActiveAdmin = $this->makeUser('admin');
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         app(UserService::class)->updateStatus($actor, $lastActiveAdmin, false);
     }
@@ -261,6 +264,141 @@ class UserManagementTest extends TestCase
             'email' => $user->email,
             'role' => 'admin',
         ]);
+    }
+
+    public function test_create_user_supports_active_or_null_division(): void
+    {
+        Sanctum::actingAs($this->makeUser('admin'));
+        $division = Division::query()->create(['name' => 'Engineering']);
+
+        $this->postJson('/api/users', [
+            'name' => 'Assigned User',
+            'email' => 'assigned@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'karyawan',
+            'division_id' => $division->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.division.id', $division->id)
+            ->assertJsonPath('data.division.name', 'Engineering');
+
+        $this->postJson('/api/users', [
+            'name' => 'Unassigned User',
+            'email' => 'unassigned@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'karyawan',
+            'division_id' => null,
+        ])->assertCreated()->assertJsonPath('data.division', null);
+    }
+
+    public function test_create_rejects_inactive_or_invalid_division(): void
+    {
+        Sanctum::actingAs($this->makeUser('admin'));
+        $inactive = Division::query()->create(['name' => 'Legacy', 'status' => 'inactive']);
+        $payload = [
+            'name' => 'Invalid Assignment',
+            'email' => 'invalid-division@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'karyawan',
+        ];
+
+        $this->postJson('/api/users', [...$payload, 'division_id' => $inactive->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('division_id');
+        $this->postJson('/api/users', [...$payload, 'division_id' => 999999])
+            ->assertUnprocessable()->assertJsonValidationErrors('division_id');
+    }
+
+    public function test_update_can_move_or_remove_division_and_role_change_preserves_it(): void
+    {
+        Sanctum::actingAs($this->makeUser('admin'));
+        $first = Division::query()->create(['name' => 'First']);
+        $second = Division::query()->create(['name' => 'Second']);
+        $target = $this->makeUser('karyawan', ['division_id' => $first->id]);
+
+        $this->putJson("/api/users/{$target->id}", [
+            'name' => $target->name,
+            'email' => $target->email,
+            'role' => 'project_manager',
+        ])->assertOk()->assertJsonPath('data.division.id', $first->id);
+
+        $this->putJson("/api/users/{$target->id}", [
+            'name' => $target->name,
+            'email' => $target->email,
+            'role' => 'project_manager',
+            'division_id' => $second->id,
+        ])->assertOk()->assertJsonPath('data.division.id', $second->id);
+
+        $this->putJson("/api/users/{$target->id}", [
+            'name' => $target->name,
+            'email' => $target->email,
+            'role' => 'project_manager',
+            'division_id' => null,
+        ])->assertOk()->assertJsonPath('data.division', null);
+    }
+
+    public function test_existing_inactive_division_is_preserved_but_new_assignment_is_rejected(): void
+    {
+        Sanctum::actingAs($this->makeUser('admin'));
+        $inactive = Division::query()->create(['name' => 'Historical', 'status' => 'inactive']);
+        $existing = $this->makeUser('karyawan', ['division_id' => $inactive->id]);
+        $other = $this->makeUser('karyawan');
+
+        $this->putJson("/api/users/{$existing->id}", [
+            'name' => 'Updated Historical User',
+            'email' => $existing->email,
+            'role' => 'project_manager',
+            'division_id' => $inactive->id,
+        ])->assertOk()->assertJsonPath('data.division.id', $inactive->id);
+
+        $this->putJson("/api/users/{$other->id}", [
+            'name' => $other->name,
+            'email' => $other->email,
+            'role' => 'karyawan',
+            'division_id' => $inactive->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('division_id');
+    }
+
+    public function test_division_head_cannot_be_moved_until_head_position_is_released(): void
+    {
+        Sanctum::actingAs($this->makeUser('admin'));
+        $first = Division::query()->create(['name' => 'Head Division']);
+        $second = Division::query()->create(['name' => 'Destination']);
+        $head = $this->makeUser('project_manager', ['division_id' => $first->id]);
+        $first->update(['head_user_id' => $head->id]);
+
+        $this->putJson("/api/users/{$head->id}", [
+            'name' => $head->name,
+            'email' => $head->email,
+            'role' => 'project_manager',
+            'division_id' => $second->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('division_id');
+
+        $this->assertSame($first->id, $head->fresh()->division_id);
+    }
+
+    public function test_user_list_eager_loads_roles_and_divisions_without_n_plus_one(): void
+    {
+        Sanctum::actingAs($this->makeUser('admin'));
+        $division = Division::query()->create(['name' => 'Shared Division']);
+        User::factory(8)->create(['division_id' => $division->id])
+            ->each(fn (User $user) => $user->syncRoles('karyawan'));
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $response = $this->getJson('/api/users?per_page=10')->assertOk();
+
+        $divisionNames = collect($response->json('data'))
+            ->pluck('division.name')
+            ->filter();
+        $this->assertTrue($divisionNames->contains('Shared Division'));
+
+        // Query count tetap konstan karena roles dan division eager-loaded,
+        // bukan bertambah satu query untuk setiap baris user.
+        $this->assertLessThanOrEqual(8, count(DB::getQueryLog()));
+        DB::disableQueryLog();
     }
 
     private function makeUser(string $role, array $attributes = []): User

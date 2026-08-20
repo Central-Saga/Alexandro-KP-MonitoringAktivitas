@@ -11,7 +11,7 @@ class UserRepository
     public function paginate(array $filters): LengthAwarePaginator
     {
         // Roles selalu eager-loaded agar UserResource tidak memicu query N+1.
-        $query = User::query()->with('roles');
+        $query = User::query()->with(['roles', 'division']);
 
         if (! empty($filters['search'])) {
             $search = mb_strtolower($filters['search']);
@@ -49,7 +49,7 @@ class UserRepository
         }
 
         $users = User::query()
-            ->with('roles')
+            ->with(['roles', 'division'])
             ->whereKey($ids)
             ->get()
             ->keyBy('id');
@@ -84,7 +84,7 @@ class UserRepository
             $user->tokens()->delete();
         }
 
-        return $user->fresh('roles');
+        return $user->fresh(['roles', 'division']);
     }
 
     public function update(User $user, array $data): User

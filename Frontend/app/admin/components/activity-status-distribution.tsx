@@ -8,6 +8,7 @@ const statusMeta: Record<
   ongoing: { label: "Berjalan", bar: "bg-blue-500", text: "text-blue-600" },
   selesai: { label: "Selesai", bar: "bg-emerald-500", text: "text-emerald-600" },
   approved: { label: "Disetujui", bar: "bg-[#20be63]", text: "text-[#18a84f]" },
+  rejected: { label: "Ditolak", bar: "bg-red-500", text: "text-red-600" },
 };
 
 export default function ActivityStatusDistribution({

@@ -11,23 +11,25 @@ class ActivityRepository
 {
     public function paginate(User $user, array $filters): LengthAwarePaginator
     {
-        $query = Activity::query()->with($this->relations());
+        // Semua relasi resource dimuat di depan agar list tidak menambah query
+        // untuk tiap activity, user, division, approver, atau media.
+        $query = Activity::query()->with([
+            'user.division', 'project', 'projectTask', 'approver', 'rejector', 'media',
+        ]);
 
         if ($user->hasRole('karyawan')) {
             $query->where('user_id', $user->id);
         }
-
         if ($user->hasRole('project_manager')) {
-            $query->whereHas('project', function ($projectQuery) use ($user) {
-                $projectQuery->where('project_manager_id', $user->id);
-            })->whereHas('project.assignments', function ($assignmentQuery) {
-                $assignmentQuery->whereColumn(
-                    'project_assignments.user_id',
-                    'activities.user_id'
-                )->where('project_assignments.status', 'aktif');
-            });
+            // Filter request tidak boleh memperluas scope project milik PM.
+            $query->whereHas('project', fn ($project) => $project
+                ->where('project_manager_id', $user->id))
+                // List harus memakai syarat assignment aktif yang sama dengan
+                // ActivityPolicy agar anggota yang dilepas tidak tetap terlihat.
+                ->whereHas('project.assignments', fn ($assignments) => $assignments
+                    ->whereColumn('project_assignments.user_id', 'activities.user_id')
+                    ->where('project_assignments.status', 'aktif'));
         }
-
         if (! empty($filters['search'])) {
             $search = mb_strtolower($filters['search']);
             $query->where(function ($builder) use ($search) {
@@ -36,17 +38,18 @@ class ActivityRepository
                         ->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]));
             });
         }
-
         foreach (['user_id', 'project_id', 'status'] as $field) {
             if (! empty($filters[$field])) {
                 $query->where($field, $filters[$field]);
             }
         }
-
+        if (! empty($filters['division_id'])) {
+            $query->whereHas('user', fn ($users) => $users
+                ->where('division_id', $filters['division_id']));
+        }
         if (! empty($filters['date_from'])) {
             $query->whereDate('activity_date', '>=', $filters['date_from']);
         }
-
         if (! empty($filters['date_to'])) {
             $query->whereDate('activity_date', '<=', $filters['date_to']);
         }
@@ -58,6 +61,11 @@ class ActivityRepository
     public function findById(int $id): ?Activity
     {
         return Activity::with($this->relations())->find($id);
+    }
+
+    public function findForUpdate(int $id): Activity
+    {
+        return Activity::query()->lockForUpdate()->findOrFail($id);
     }
 
     public function findManyForList(array $ids): Collection
@@ -81,7 +89,7 @@ class ActivityRepository
 
     public function create(array $data): Activity
     {
-        return Activity::create($data);
+        return Activity::create($data)->load($this->relations());
     }
 
     public function update(Activity $activity, array $data): Activity
@@ -98,6 +106,6 @@ class ActivityRepository
 
     private function relations(): array
     {
-        return ['user', 'project', 'media'];
+        return ['user.division', 'project', 'projectTask', 'approver', 'rejector', 'media'];
     }
 }

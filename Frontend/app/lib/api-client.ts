@@ -74,6 +74,18 @@ export function apiPut<T>(
   });
 }
 
+export function apiPatch<T>(
+  path: string,
+  body?: unknown,
+  options: RequestInit = {},
+) {
+  return apiFetch<T>(path, {
+    ...options,
+    method: "PATCH",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
 export function apiDelete<T>(path: string, options: RequestInit = {}) {
   return apiFetch<T>(path, { ...options, method: "DELETE" });
 }

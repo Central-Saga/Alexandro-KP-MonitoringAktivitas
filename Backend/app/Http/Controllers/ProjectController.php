@@ -2,207 +2,130 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateProjectRequest;
+use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Support\QueryCache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ProjectController extends Controller
 {
     public function __construct(protected QueryCache $cache) {}
 
-    /**
-     * Menampilkan daftar project.
-     *
-     * Admin dapat melihat seluruh project.
-     * Project Manager hanya dapat melihat project
-     * yang dia kelola sendiri.
-     */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Project::class);
+
         $user = $request->user();
+        $query = Project::query();
 
-        // Hanya Admin dan Project Manager yang boleh
-        // mengakses daftar project.
-        if (! $user->hasAnyRole(['admin', 'project_manager'])) {
-            return response()->json([
-                'message' => 'Tidak memiliki akses.',
-            ], 403);
-        }
-
-        $query = Project::with('projectManager');
-
-        // Project Manager hanya melihat project
-        // yang memiliki dirinya sebagai project manager.
         if ($user->hasRole('project_manager')) {
             $query->where('project_manager_id', $user->id);
         }
+        if ($user->hasRole('karyawan')) {
+            // Project selector Karyawan bersumber dari scope backend, bukan
+            // mengambil seluruh project lalu menyembunyikannya di frontend.
+            $query->whereHas('assignments', fn ($assignments) => $assignments
+                ->where('user_id', $user->id)
+                ->where('status', 'aktif'));
+        }
 
-        $projects = $this->cache->remember(
+        // Cache hanya menyimpan ID yang sudah terscope. Model dan relasinya
+        // selalu di-hydrate ulang agar response aman melalui ProjectResource.
+        $ids = $this->cache->remember(
             QueryCache::PROJECTS,
             [
                 'actor_id' => $user->getKey(),
                 'roles' => $user->getRoleNames()->sort()->values()->all(),
-                'sort' => 'created_at:desc',
+                'sort' => 'created_at:desc,id:desc',
             ],
-            // Project belum memiliki service/repository. Cache menyimpan array
-            // scalar agar contract JSON tetap sama dan aman untuk Redis.
-            fn () => $query->latest()->get()->toArray(),
+            fn () => $query->latest()->latest('id')->pluck('id')->all(),
         );
 
-        return response()->json(['data' => $projects]);
+        $projects = Project::query()
+            ->with('projectManager.roles')
+            ->withCount('activeAssignments')
+            ->whereKey($ids)
+            ->get()
+            ->sortBy(fn (Project $project) => array_search($project->id, $ids, true))
+            ->values();
+
+        return ProjectResource::collection($projects);
     }
 
-    /**
-     * Menampilkan detail sebuah project.
-     */
     public function show(Request $request, int $id)
     {
-        $user = $request->user();
+        $project = Project::query()->find($id);
 
-        $project = Project::with([
-            'projectManager',
-            'assignments.user',
-        ])->find($id);
+        abort_if(! $project, 404, 'Project tidak ditemukan.');
+        Gate::authorize('view', $project);
 
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
-        }
+        $assignmentScope = fn ($assignments) => $request->user()->hasRole('karyawan')
+            ? $assignments->where('user_id', $request->user()->id)
+            : $assignments;
 
-        // Project Manager hanya boleh melihat detail
-        // project yang memang dia kelola.
-        if (
-            $user->hasRole('project_manager') &&
-            $project->project_manager_id !== $user->id
-        ) {
-            return response()->json([
-                'message' => 'Tidak memiliki akses ke project ini.',
-            ], 403);
-        }
+        // Karyawan hanya menerima assignment miliknya pada detail project;
+        // Admin/PM tetap memperoleh daftar tim sesuai kontrak management.
+        $project->load([
+            'projectManager.roles',
+            'assignments' => $assignmentScope,
+            'assignments.user.roles',
+            'assignments.user.division',
+        ])->loadCount('activeAssignments');
 
-        return response()->json([
-            'data' => $project,
-        ]);
+        return new ProjectResource($project);
     }
 
-    /**
-     * Membuat project baru.
-     *
-     * Hanya Project Manager yang diperbolehkan
-     * membuat project.
-     */
-    public function store(Request $request)
+    public function store(StoreProjectRequest $request)
     {
-        // Pemeriksaan role sekarang menggunakan Spatie.
-        if (! $request->user()->hasRole('project_manager')) {
-            return response()->json([
-                'message' => 'Hanya Project Manager yang dapat membuat project.',
-            ], 403);
-        }
+        Gate::authorize('create', Project::class);
 
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'client_name' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'status' => 'nullable|string|max:50',
-        ]);
-
-        // Project otomatis menjadi milik PM yang sedang login.
-        $data['project_manager_id'] = $request->user()->id;
-
-        // Jika status tidak diberikan, gunakan status default.
+        $data = $request->validated();
         $data['status'] ??= 'berlangsung';
-
-        $project = Project::create($data);
+        $project = Project::query()->create($data);
         $this->cache->invalidate(QueryCache::PROJECTS);
 
         return response()->json([
             'message' => 'Project berhasil dibuat.',
-            'data' => $project,
+            'data' => new ProjectResource($project->load('projectManager.roles')->loadCount('activeAssignments')),
         ], 201);
     }
 
-    /**
-     * Mengubah data project.
-     */
-    public function update(Request $request, int $id)
+    public function update(UpdateProjectRequest $request, int $id)
     {
-        $project = Project::find($id);
+        $project = Project::query()->find($id);
+        abort_if(! $project, 404, 'Project tidak ditemukan.');
+        Gate::authorize('update', $project);
 
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
+        $data = $request->validated();
+
+        if ($request->user()->hasRole('project_manager')) {
+            unset($data['project_manager_id']);
         }
-
-        $user = $request->user();
-
-        // Project Manager hanya boleh mengubah project
-        // yang memang dia kelola.
-        if (
-            $user->hasRole('project_manager') &&
-            $project->project_manager_id !== $user->id
-        ) {
-            return response()->json([
-                'message' => 'Tidak memiliki akses ke project ini.',
-            ], 403);
-        }
-
-        // Hanya Admin dan Project Manager yang boleh
-        // melakukan update project.
-        if (! $user->hasAnyRole(['admin', 'project_manager'])) {
-            return response()->json([
-                'message' => 'Tidak memiliki akses.',
-            ], 403);
-        }
-
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'client_name' => 'sometimes|string|max:255',
-            'start_date' => 'sometimes|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'status' => 'sometimes|string|max:50',
-        ]);
 
         $project->update($data);
+
+        // Pergantian PM langsung mengubah scope list dan Activity, sehingga
+        // kedua cache harus dibuang dalam mutation yang sama.
         $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
         return response()->json([
             'message' => 'Project berhasil diperbarui.',
-            'data' => $project->fresh(),
+            'data' => new ProjectResource($project->fresh()->load('projectManager.roles')->loadCount('activeAssignments')),
         ]);
     }
 
-    /**
-     * Menghapus project.
-     *
-     * Saat ini hanya Admin yang diperbolehkan
-     * menghapus project.
-     */
     public function destroy(Request $request, int $id)
     {
-        $project = Project::find($id);
-
-        if (! $project) {
-            return response()->json([
-                'message' => 'Project tidak ditemukan.',
-            ], 404);
-        }
-
-        // Hanya Admin yang dapat menghapus project.
-        if (! $request->user()->hasRole('admin')) {
-            return response()->json([
-                'message' => 'Hanya Admin yang dapat menghapus project.',
-            ], 403);
-        }
+        $project = Project::query()->find($id);
+        abort_if(! $project, 404, 'Project tidak ditemukan.');
+        Gate::authorize('delete', $project);
 
         $project->delete();
         $this->cache->invalidate(QueryCache::PROJECTS, QueryCache::ACTIVITIES);
 
-        return response()->json([
-            'message' => 'Project berhasil dihapus.',
-        ]);
+        return response()->json(['message' => 'Project berhasil dihapus.']);
     }
 }

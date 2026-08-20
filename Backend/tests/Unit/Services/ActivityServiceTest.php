@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Enums\ActivityStatus;
 use App\Models\Activity;
 use App\Models\User;
 use App\Repositories\ActivityRepository;
@@ -10,6 +11,7 @@ use App\Support\QueryCache;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Mockery;
 use Tests\TestCase;
 
@@ -79,19 +81,46 @@ class ActivityServiceTest extends TestCase
         $service->paginate($actor, []);
     }
 
+    public function test_approve_and_reject_force_next_list_query(): void
+    {
+        $repository = Mockery::mock(ActivityRepository::class);
+        $activity = $this->activity(30, ActivityStatus::SELESAI);
+        $repository->shouldReceive('paginate')->times(3)->andReturn($this->paginator($activity));
+        $repository->shouldNotReceive('findManyForList');
+        $repository->shouldReceive('findForUpdate')->twice()->with(30)->andReturn($activity);
+        $repository->shouldReceive('update')->twice()->andReturnUsing(function (Activity $model, array $data) {
+            $model->forceFill($data);
+
+            return $model;
+        });
+        DB::shouldReceive('transaction')->twice()->andReturnUsing(fn ($callback) => $callback());
+        $service = new ActivityService($repository, new QueryCache);
+        $actor = $this->actor(1, 'admin');
+
+        $service->paginate($actor, []);
+        $approved = $service->approve($activity, $actor);
+        $service->paginate($actor, []);
+        $rejected = $service->reject($approved, $actor, 'Bukti kurang');
+        $service->paginate($actor, []);
+
+        $this->assertSame(ActivityStatus::REJECTED, $rejected->status);
+        $this->assertSame('Bukti kurang', $rejected->rejection_reason);
+    }
+
     private function actor(int $id, string $role): User
     {
         $user = Mockery::mock(User::class);
         $user->shouldReceive('getKey')->andReturn($id);
+        $user->shouldReceive('getAttribute')->with('id')->andReturn($id)->byDefault();
         $user->shouldReceive('getRoleNames')->andReturn(collect([$role]));
 
         return $user;
     }
 
-    private function activity(int $id): Activity
+    private function activity(int $id, ActivityStatus $status = ActivityStatus::PENDING): Activity
     {
         $activity = new Activity;
-        $activity->forceFill(['id' => $id]);
+        $activity->forceFill(['id' => $id, 'status' => $status]);
 
         return $activity;
     }

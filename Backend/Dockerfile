@@ -6,11 +6,13 @@ RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libpq-dev \
+    libsqlite3-dev \
     libzip-dev \
     zip \
     curl \
     && docker-php-ext-install \
     pdo_pgsql \
+    pdo_sqlite \
     zip \
     exif \
     && a2enmod rewrite \

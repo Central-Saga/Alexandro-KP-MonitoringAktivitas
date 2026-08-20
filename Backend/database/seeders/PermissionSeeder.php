@@ -33,6 +33,8 @@ class PermissionSeeder extends Seeder
             'activity.update',
             'activity.delete',
             'activity.upload_media',
+            'activity.approve',
+            'activity.reject',
 
             // Project
             'project.view',
@@ -46,6 +48,12 @@ class PermissionSeeder extends Seeder
             'assignment.update',
             'assignment.delete',
 
+            // Project Task
+            'project_task.view',
+            'project_task.create',
+            'project_task.update',
+            'project_task.status',
+
             // Role Management
             'role.view',
             'role.create',
@@ -57,6 +65,12 @@ class PermissionSeeder extends Seeder
             'user.create',
             'user.update',
             'user.deactivate',
+
+            // Division Management
+            'division.view',
+            'division.create',
+            'division.update',
+            'division.deactivate',
         ];
 
         /**
@@ -99,6 +113,8 @@ class PermissionSeeder extends Seeder
             'activity.create',
             'activity.update',
             'activity.upload_media',
+            'activity.approve',
+            'activity.reject',
 
             'project.view',
             'project.create',
@@ -108,6 +124,11 @@ class PermissionSeeder extends Seeder
             'assignment.create',
             'assignment.update',
             'assignment.delete',
+
+            'project_task.view',
+            'project_task.create',
+            'project_task.update',
+            'project_task.status',
         ]);
 
         /**
@@ -126,6 +147,7 @@ class PermissionSeeder extends Seeder
             'activity.create',
             'activity.update',
             'activity.upload_media',
+            'project_task.view',
         ]);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

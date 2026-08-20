@@ -9,6 +9,7 @@ export type ManagedUser = {
   is_active: boolean;
   deactivated_at: string | null;
   created_at: string;
+  division: { id: number; name: string } | null;
 };
 
 export type UserQuery = {
@@ -40,9 +41,12 @@ export type CreateUserPayload = {
   password: string;
   password_confirmation: string;
   role: UserRole;
+  division_id?: number | null;
 };
 
-export type UpdateUserPayload = Pick<ManagedUser, "name" | "email" | "role">;
+export type UpdateUserPayload = Pick<ManagedUser, "name" | "email" | "role"> & {
+  division_id?: number | null;
+};
 type UserResponse = { data: ManagedUser };
 type UserMutationResponse = { message: string; data: ManagedUser };
 

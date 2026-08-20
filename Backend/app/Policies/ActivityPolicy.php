@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\ActivityStatus;
 use App\Models\Activity;
 use App\Models\User;
 
@@ -49,7 +50,10 @@ class ActivityPolicy
         }
 
         if ($user->hasRole('karyawan')) {
-            return $activity->user_id === $user->id;
+            // Hasil yang sudah approved bersifat final untuk Karyawan. Activity
+            // rejected tetap dapat direvisi dan dikirim ulang secara operasional.
+            return $activity->user_id === $user->id
+                && $activity->status !== ActivityStatus::APPROVED;
         }
 
         if ($user->hasRole('project_manager')) {
@@ -68,6 +72,16 @@ class ActivityPolicy
     public function delete(User $user, Activity $activity): bool
     {
         return $user->hasRole('admin');
+    }
+
+    public function approve(User $user, Activity $activity): bool
+    {
+        return $this->canReview($user, $activity, 'activity.approve');
+    }
+
+    public function reject(User $user, Activity $activity): bool
+    {
+        return $this->canReview($user, $activity, 'activity.reject');
     }
 
     public function restore(User $user, Activity $activity): bool
@@ -94,5 +108,21 @@ class ActivityPolicy
                 ->where('user_id', $activity->user_id)
                 ->where('status', 'aktif')
                 ->exists();
+    }
+
+    private function canReview(User $user, Activity $activity, string $permission): bool
+    {
+        if (! $user->can($permission)) {
+            return false;
+        }
+
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        // PM hanya dapat mengambil keputusan untuk project yang dikelolanya;
+        // role/permission saja tidak cukup untuk melampaui project scope.
+        return $user->hasRole('project_manager')
+            && $this->isManagedProjectActivity($user, $activity);
     }
 }
