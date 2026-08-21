@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\Services\ProjectTaskServiceInterface;
 use App\Enums\ProjectTaskStatus;
 use App\Http\Requests\IndexProjectTaskRequest;
 use App\Http\Requests\StoreProjectTaskRequest;
@@ -9,12 +10,11 @@ use App\Http\Requests\UpdateProjectTaskRequest;
 use App\Http\Requests\UpdateProjectTaskStatusRequest;
 use App\Http\Resources\ProjectTaskResource;
 use App\Models\ProjectTask;
-use App\Services\ProjectTaskService;
 use Illuminate\Support\Facades\Gate;
 
 class ProjectTaskController extends Controller
 {
-    public function __construct(protected ProjectTaskService $service) {}
+    public function __construct(protected ProjectTaskServiceInterface $service) {}
 
     public function index(IndexProjectTaskRequest $request)
     {

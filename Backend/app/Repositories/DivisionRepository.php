@@ -2,10 +2,11 @@
 
 namespace App\Repositories;
 
+use App\Contracts\Repositories\DivisionRepositoryInterface;
 use App\Models\Division;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class DivisionRepository
+class DivisionRepository implements DivisionRepositoryInterface
 {
     public function paginate(array $filters): LengthAwarePaginator
     {

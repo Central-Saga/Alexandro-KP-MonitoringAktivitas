@@ -2,12 +2,13 @@
 
 namespace App\Repositories;
 
+use App\Contracts\Repositories\ActivityRepositoryInterface;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
-class ActivityRepository
+class ActivityRepository implements ActivityRepositoryInterface
 {
     public function paginate(User $user, array $filters): LengthAwarePaginator
     {

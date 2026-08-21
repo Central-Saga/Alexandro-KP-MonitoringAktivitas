@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\Services\DivisionServiceInterface;
 use App\Enums\DivisionName;
 use App\Http\Requests\IndexDivisionRequest;
 use App\Http\Requests\StoreDivisionRequest;
@@ -9,12 +10,11 @@ use App\Http\Requests\UpdateDivisionRequest;
 use App\Http\Requests\UpdateDivisionStatusRequest;
 use App\Http\Resources\DivisionResource;
 use App\Models\Division;
-use App\Services\DivisionService;
 use Illuminate\Support\Facades\Gate;
 
 class DivisionController extends Controller
 {
-    public function __construct(protected DivisionService $service) {}
+    public function __construct(protected DivisionServiceInterface $service) {}
 
     public function index(IndexDivisionRequest $request)
     {

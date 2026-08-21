@@ -2,11 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Contracts\Repositories\ProjectTaskRepositoryInterface;
 use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class ProjectTaskRepository
+class ProjectTaskRepository implements ProjectTaskRepositoryInterface
 {
     public function paginate(User $user, array $filters): LengthAwarePaginator
     {

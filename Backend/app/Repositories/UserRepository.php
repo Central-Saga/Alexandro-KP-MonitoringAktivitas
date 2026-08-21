@@ -2,11 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
-class UserRepository
+class UserRepository implements UserRepositoryInterface
 {
     public function paginate(array $filters): LengthAwarePaginator
     {

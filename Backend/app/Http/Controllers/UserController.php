@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\Services\UserServiceInterface;
 use App\Http\Requests\IndexUserRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\UpdateUserStatusRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Services\UserService;
 use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
 {
-    public function __construct(protected UserService $service) {}
+    public function __construct(protected UserServiceInterface $service) {}
 
     public function index(IndexUserRequest $request)
     {

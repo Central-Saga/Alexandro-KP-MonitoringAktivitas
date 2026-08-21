@@ -2,11 +2,12 @@
 
 namespace App\Services;
 
-use App\Contracts\RoleRepositoryInterface;
+use App\Contracts\Repositories\RoleRepositoryInterface;
+use App\Contracts\Services\RoleServiceInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Spatie\Permission\Models\Role;
 
-class RoleService
+class RoleService implements RoleServiceInterface
 {
     public function __construct(
         protected RoleRepositoryInterface $repository

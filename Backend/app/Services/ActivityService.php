@@ -2,22 +2,23 @@
 
 namespace App\Services;
 
+use App\Contracts\Repositories\ActivityRepositoryInterface;
+use App\Contracts\Services\ActivityServiceInterface;
 use App\Enums\ActivityStatus;
 use App\Enums\ProjectTaskStatus;
 use App\Models\Activity;
 use App\Models\ProjectAssignment;
 use App\Models\ProjectTask;
 use App\Models\User;
-use App\Repositories\ActivityRepository;
 use App\Support\QueryCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class ActivityService
+class ActivityService implements ActivityServiceInterface
 {
     public function __construct(
-        protected ActivityRepository $repository,
+        protected ActivityRepositoryInterface $repository,
         protected QueryCache $cache,
     ) {}
 

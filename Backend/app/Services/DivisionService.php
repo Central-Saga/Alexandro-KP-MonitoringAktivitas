@@ -2,18 +2,19 @@
 
 namespace App\Services;
 
+use App\Contracts\Repositories\DivisionRepositoryInterface;
+use App\Contracts\Services\DivisionServiceInterface;
 use App\Models\Division;
 use App\Models\User;
-use App\Repositories\DivisionRepository;
 use App\Support\QueryCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class DivisionService
+class DivisionService implements DivisionServiceInterface
 {
     public function __construct(
-        protected DivisionRepository $repository,
+        protected DivisionRepositoryInterface $repository,
         protected QueryCache $cache,
     ) {}
 

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\Services\RoleServiceInterface;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
 use App\Http\Resources\RoleResource;
 use App\Models\User;
-use App\Services\RoleService;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -20,7 +20,7 @@ class RoleController extends Controller
     ];
 
     public function __construct(
-        protected RoleService $service
+        protected RoleServiceInterface $service
     ) {}
 
     /**

@@ -2,22 +2,23 @@
 
 namespace App\Services;
 
+use App\Contracts\Repositories\ProjectTaskRepositoryInterface;
+use App\Contracts\Services\ProjectTaskServiceInterface;
 use App\Enums\ProjectTaskStatus;
 use App\Models\Project;
 use App\Models\ProjectAssignment;
 use App\Models\ProjectTask;
 use App\Models\User;
-use App\Repositories\ProjectTaskRepository;
 use App\Support\QueryCache;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class ProjectTaskService
+class ProjectTaskService implements ProjectTaskServiceInterface
 {
     public function __construct(
-        protected ProjectTaskRepository $repository,
+        protected ProjectTaskRepositoryInterface $repository,
         protected QueryCache $cache,
     ) {}
 

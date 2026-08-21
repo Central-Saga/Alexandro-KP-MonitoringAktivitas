@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\Services\ActivityServiceInterface;
 use App\Enums\ActivityStatus;
 use App\Events\ActivityCreated;
 use App\Http\Requests\IndexActivityRequest;
@@ -9,7 +10,6 @@ use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectAssignment;
-use App\Services\ActivityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -17,7 +17,7 @@ use Illuminate\Validation\Rule;
 class ActivityController extends Controller
 {
     public function __construct(
-        protected ActivityService $service
+        protected ActivityServiceInterface $service
     ) {}
 
     /**

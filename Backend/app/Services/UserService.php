@@ -2,18 +2,19 @@
 
 namespace App\Services;
 
+use App\Contracts\Repositories\UserRepositoryInterface;
+use App\Contracts\Services\UserServiceInterface;
 use App\Models\Division;
 use App\Models\User;
-use App\Repositories\UserRepository;
 use App\Support\QueryCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class UserService
+class UserService implements UserServiceInterface
 {
     public function __construct(
-        protected UserRepository $repository,
+        protected UserRepositoryInterface $repository,
         protected QueryCache $cache,
     ) {}
 
