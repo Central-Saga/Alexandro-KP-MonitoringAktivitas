@@ -34,7 +34,8 @@ class UpdateProjectRequest extends FormRequest
                 return;
             }
 
-            $project = Project::query()->find($this->route('id'));
+            $routeProject = $this->route('project') ?? $this->route('id');
+            $project = $routeProject instanceof Project ? $routeProject : Project::query()->find($routeProject);
             $startDate = $this->input('start_date', $project?->start_date?->toDateString());
             $endDate = $this->input('end_date', $project?->end_date?->toDateString());
 

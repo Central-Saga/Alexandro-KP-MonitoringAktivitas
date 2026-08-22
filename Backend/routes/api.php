@@ -35,20 +35,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [ProfileController::class, 'update']);
 
     // Activities
-    Route::get('/activities', [ActivityController::class, 'index']);
-    Route::get('/activities/{id}', [ActivityController::class, 'show']);
-    Route::post('/activities', [ActivityController::class, 'store']);
-    Route::put('/activities/{id}', [ActivityController::class, 'update']);
-    Route::delete('/activities/{id}', [ActivityController::class, 'destroy']);
+    // Route kustom approve/reject/media diletakkan sebelum resource CRUD standar
     Route::post('/activities/{activity}/approve', [ActivityController::class, 'approve']);
     Route::post('/activities/{activity}/reject', [ActivityController::class, 'reject']);
+    Route::post('/activities/{id}/media', [ActivityController::class, 'uploadMedia']);
+    Route::apiResource('activities', ActivityController::class);
 
     // Project
-    Route::get('/projects', [ProjectController::class, 'index']);
-    Route::get('/projects/{id}', [ProjectController::class, 'show']);
-    Route::post('/projects', [ProjectController::class, 'store']);
-    Route::put('/projects/{id}', [ProjectController::class, 'update']);
-    Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
+    Route::apiResource('projects', ProjectController::class);
 
     // Project Assignments
     Route::get('/projects/{projectId}/assignment-candidates', [ProjectAssignmentController::class, 'candidates']);
@@ -56,42 +50,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects/{projectId}/assignments', [ProjectAssignmentController::class, 'store']);
     Route::put('/projects/{projectId}/assignments/{assignmentId}', [ProjectAssignmentController::class, 'update']);
 
-    // Project Task berbeda dari membership ProjectAssignment dan memakai
-    // lifecycle status tanpa endpoint hard delete.
-    Route::get('/project-tasks', [ProjectTaskController::class, 'index']);
-    Route::post('/project-tasks', [ProjectTaskController::class, 'store']);
-    Route::get('/project-tasks/{projectTask}', [ProjectTaskController::class, 'show']);
-    Route::put('/project-tasks/{projectTask}', [ProjectTaskController::class, 'update']);
+    // Project Tasks
+    // Project Task memakai status lifecycle tanpa endpoint hard delete.
     Route::patch('/project-tasks/{projectTask}/status', [ProjectTaskController::class, 'updateStatus']);
+    Route::apiResource('project-tasks', ProjectTaskController::class)->except(['destroy']);
 
     // Role Management
     // Hanya Admin yang diperbolehkan mengelola role.
     Route::middleware('role:admin')->group(function () {
         // User memakai lifecycle aktif/nonaktif; hard delete sengaja tidak
         // disediakan agar histori dan relasi bisnis tetap terjaga.
-        Route::get('/users', [UserController::class, 'index']);
-        Route::post('/users', [UserController::class, 'store']);
         Route::patch('/users/{user}/status', [UserController::class, 'updateStatus']);
-        Route::get('/users/{user}', [UserController::class, 'show']);
-        Route::put('/users/{user}', [UserController::class, 'update']);
+        Route::apiResource('users', UserController::class)->only(['index', 'store', 'show', 'update']);
 
-        // Division memakai lifecycle status; hard delete tidak diekspos agar
-        // histori membership user tetap aman.
-        Route::get('/divisions', [DivisionController::class, 'index']);
-        Route::post('/divisions', [DivisionController::class, 'store']);
+        // Division options diletakkan sebelum resource agar tidak tertangkap sebagai parameter ID.
         Route::get('/divisions/options', [DivisionController::class, 'options']);
         Route::patch('/divisions/{division}/status', [DivisionController::class, 'updateStatus']);
-        Route::get('/divisions/{division}', [DivisionController::class, 'show']);
-        Route::put('/divisions/{division}', [DivisionController::class, 'update']);
+        Route::apiResource('divisions', DivisionController::class)->except(['destroy']);
 
-        Route::get('/roles', [RoleController::class, 'index']);
         Route::get('/permissions', [PermissionController::class, 'index']);
-        Route::post('/roles', [RoleController::class, 'store']);
-        Route::get('/roles/{id}', [RoleController::class, 'show']);
-        Route::put('/roles/{id}', [RoleController::class, 'update']);
-        Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
+        Route::apiResource('roles', RoleController::class);
     });
-
-    // Upload bukti aktivitas
-    Route::post('/activities/{id}/media', [ActivityController::class, 'uploadMedia']);
 });

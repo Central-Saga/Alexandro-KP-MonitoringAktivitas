@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
 
 class UpdateRoleRequest extends FormRequest
 {
@@ -23,8 +24,8 @@ class UpdateRoleRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Route API menggunakan /api/roles/{id}.
-        $roleId = $this->route('id');
+        $role = $this->route('role') ?? $this->route('id');
+        $roleId = $role instanceof Role ? $role->id : $role;
 
         return [
             // Nama role wajib diisi dan harus unik.
