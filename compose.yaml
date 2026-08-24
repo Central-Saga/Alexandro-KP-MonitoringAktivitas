@@ -65,8 +65,7 @@ services:
 
     container_name: queue-worker-csm
     restart: unless-stopped
-    entrypoint: ["docker-php-entrypoint"]
-    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--timeout=90"]
+    command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=90
 
     volumes:
       - ./Backend:/var/www/html
@@ -74,8 +73,8 @@ services:
     environment: *backend-environment
 
     depends_on:
-      - postgres
       - redis
+      - backend
 
   frontend:
     build:
