@@ -51,8 +51,8 @@ export default function WeeklyActivity({ data, isLoading, hasError }: WeeklyActi
         <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#e1e7ee] pt-5 sm:flex sm:gap-8">
           <Summary value={!isLoading && data ? data.total : "—"} label="Total Aktivitas" tone="text-[#172b4d]" />
           <Summary value="—" label="Disetujui" tone="text-[#43a956]" />
-          <Summary value="—" label="Menunggu" tone="text-amber-500" />
-          <Summary value="—" label="Ditolak" tone="text-red-500" />
+          <Summary value="—" label="Menunggu Validasi" tone="text-amber-500" />
+          <Summary value="—" label="Perlu Revisi" tone="text-red-500" />
         </div>
         <p className="mt-3 text-xs text-[#71829a]">
           Breakdown status mingguan belum tersedia dari API aggregate.

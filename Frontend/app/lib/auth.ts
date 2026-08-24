@@ -46,8 +46,8 @@ export function saveAuth(
 
 export function getStoredAuth(): StoredAuth | null {
   const storageOptions = [
-    { storage: localStorage, rememberMe: true },
     { storage: sessionStorage, rememberMe: false },
+    { storage: localStorage, rememberMe: true },
   ];
 
   for (const { storage, rememberMe } of storageOptions) {

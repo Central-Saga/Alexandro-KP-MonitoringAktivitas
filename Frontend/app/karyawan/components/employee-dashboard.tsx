@@ -18,7 +18,7 @@ export default function EmployeeDashboard() {
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard title="Total Aktivitas Saya" value={metric(data?.totalActivities.data, isLoading)} detail={detail(data?.totalActivities.error, isLoading)} icon="activity" tone="green" />
       <StatCard title="Aktivitas Hari Ini" value={metric(data?.todayActivities.data, isLoading)} detail={detail(data?.todayActivities.error, isLoading)} icon="project" tone="blue" />
-      <StatCard title="Menunggu Review" value={metric(data?.awaitingReview.data, isLoading)} detail={detail(data?.awaitingReview.error, isLoading)} icon="shield" tone="yellow" />
+      <StatCard title="Menunggu Validasi" value={metric(data?.awaitingReview.data, isLoading)} detail={detail(data?.awaitingReview.error, isLoading)} icon="shield" tone="yellow" />
       <StatCard title="Disetujui" value={metric(data?.approvedActivities.data, isLoading)} detail={detail(data?.approvedActivities.error, isLoading)} icon="user-check" tone="red" />
     </section>
     <ActiveTasks tasks={data?.activeTasks.data ?? null} loading={isLoading} error={Boolean(data?.activeTasks.error ?? fatalError)} />
@@ -49,8 +49,8 @@ function ProjectAssignments({ projects, loading, error, onRetry }: { projects: P
 function Message({ text }: { text: string }) { return <p className="py-10 text-center text-sm text-[#71829a]">{text}</p>; }
 function metric(value: number | null | undefined, loading: boolean): number | string { return loading || value === null || value === undefined ? "—" : value; }
 function detail(error: unknown, loading: boolean) { if (loading) return "Memuat data..."; return error ? "Data tidak tersedia" : "Berdasarkan seluruh data Anda"; }
-const statusLabels: Record<ActivityStatus, string> = { pending: "Pending", ongoing: "Berjalan", selesai: "Menunggu Review", approved: "Disetujui", rejected: "Ditolak" };
-function ActivityBadge({ status }: { status: ActivityStatus }) { const tone = status === "approved" ? "bg-green-100 text-green-700" : status === "rejected" ? "bg-red-100 text-red-700" : status === "selesai" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"; return <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{statusLabels[status]}</span>; }
+const statusLabels: Record<ActivityStatus, string> = { pending: "Menunggu Validasi", ongoing: "Menunggu Validasi", selesai: "Menunggu Validasi", approved: "Disetujui", rejected: "Perlu Revisi" };
+function ActivityBadge({ status }: { status: ActivityStatus }) { const tone = status === "approved" ? "bg-green-100 text-green-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"; return <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{statusLabels[status]}</span>; }
 function ProjectStatus({ status }: { status: string }) { const finished = status === "selesai"; return <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${finished ? "bg-slate-100 text-slate-600" : "bg-green-100 text-green-700"}`}>{formatStatus(status)}</span>; }
 function formatStatus(value: string) { return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function formatDate(value: string) { const [year, month, day] = value.slice(0, 10).split("-").map(Number); return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(year, month - 1, day)); }

@@ -7,7 +7,9 @@ import { AdminIcon } from "./admin-icons";
 const pageTitles: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
   "/admin/users": "Data User",
+  "/admin/roles": "Manajemen Role",
   "/admin/divisions": "Data Divisi",
+  "/admin/projects": "Manajemen Proyek",
   "/admin/activities": "Monitoring Aktivitas",
   "/admin/reports": "Laporan",
   "/admin/profile": "Profil",

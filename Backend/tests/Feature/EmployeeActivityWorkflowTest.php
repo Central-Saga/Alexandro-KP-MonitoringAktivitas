@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -24,9 +25,16 @@ class EmployeeActivityWorkflowTest extends TestCase
         parent::setUp();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        foreach (['activity.approve', 'activity.reject'] as $permission) {
+            Permission::query()->create(['name' => $permission, 'guard_name' => 'web']);
+        }
+
         foreach (['admin', 'project_manager', 'karyawan'] as $role) {
             Role::query()->create(['name' => $role, 'guard_name' => 'web']);
         }
+
+        Role::findByName('admin')->syncPermissions(['activity.approve', 'activity.reject']);
+        Role::findByName('project_manager')->syncPermissions(['activity.approve', 'activity.reject']);
     }
 
     public function test_employee_project_list_and_detail_only_include_active_assignments(): void
@@ -70,17 +78,17 @@ class EmployeeActivityWorkflowTest extends TestCase
             $activeProject,
             [
                 'user_id' => $otherEmployee->id,
-                'status' => 'selesai',
+                'status' => 'pending',
             ]
         ))->assertCreated()
             ->assertJsonPath('data.user_id', $employee->id)
-            ->assertJsonPath('data.status', 'pending');
+            ->assertJsonPath('data.status', 'selesai');
 
         $this->assertDatabaseHas('activities', [
             'id' => $response->json('data.id'),
             'user_id' => $employee->id,
             'project_id' => $activeProject->id,
-            'status' => 'pending',
+            'status' => 'selesai',
         ]);
 
         foreach ([$inactiveProject, $foreignProject] as $project) {
@@ -134,11 +142,75 @@ class EmployeeActivityWorkflowTest extends TestCase
 
         $this->putJson("/api/activities/{$rejected->id}", [
             'title' => 'Bukti diperbaiki',
-            'status' => 'selesai',
         ])->assertOk()->assertJsonPath('data.status', 'selesai');
 
         $this->putJson("/api/activities/{$approved->id}", ['title' => 'Tidak boleh berubah'])
             ->assertForbidden();
+    }
+
+    public function test_karyawan_activity_lifecycle_create_pm_review_revision_and_resubmit(): void
+    {
+        $employee = $this->makeUser('karyawan');
+        $manager = $this->makeUser('project_manager');
+        $project = $this->makeProject($manager, 'Workflow Project');
+        $this->assign($project, $employee, 'aktif');
+
+        // 1. Karyawan creates Activity -> status is selesai (Menunggu Validasi)
+        Sanctum::actingAs($employee);
+        $createResponse = $this->postJson('/api/activities', [
+            'project_id' => $project->id,
+            'user_id' => $employee->id,
+            'title' => 'Daily Task Submission',
+            'description' => 'Mengerjakan fitur validasi',
+            'activity_date' => '2026-08-21',
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'selesai')
+            ->assertJsonPath('data.user_id', $employee->id);
+
+        $activityId = $createResponse->json('data.id');
+
+        // 2. PM managing that project retrieves it in validation queue (status=selesai)
+        Sanctum::actingAs($manager);
+        $this->getJson('/api/activities?status=selesai')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $activityId)
+            ->assertJsonPath('data.0.status', 'selesai');
+
+        // 3. PM requests revision -> status is rejected with reason
+        $this->postJson("/api/activities/{$activityId}/reject", [
+            'rejection_reason' => 'Mohon sertakan rincian langkah kerja.',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.rejection_reason', 'Mohon sertakan rincian langkah kerja.')
+            ->assertJsonPath('data.rejected_by.id', $manager->id);
+
+        // 4. Karyawan edits rejected Activity and resubmits -> status returns to selesai
+        Sanctum::actingAs($employee);
+        $this->putJson("/api/activities/{$activityId}", [
+            'title' => 'Daily Task Submission (Revisi)',
+            'description' => 'Mengerjakan fitur validasi dengan rincian lengkap',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'selesai')
+            ->assertJsonPath('data.title', 'Daily Task Submission (Revisi)');
+
+        // 5. Activity returns to PM validation queue
+        Sanctum::actingAs($manager);
+        $this->getJson('/api/activities?status=selesai')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $activityId)
+            ->assertJsonPath('data.0.status', 'selesai');
+
+        // 6. PM approves -> status is approved
+        $this->postJson("/api/activities/{$activityId}/approve")->assertOk()
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.approved_by.id', $manager->id)
+            ->assertJsonPath('data.rejection_reason', null);
+
+        // 7. Approved Activity cannot be edited by employee
+        Sanctum::actingAs($employee);
+        $this->putJson("/api/activities/{$activityId}", [
+            'title' => 'Mencoba ubah aktivitas yang sudah disetujui',
+        ])->assertForbidden();
     }
 
     public function test_employee_owner_can_upload_media_with_size_validation(): void

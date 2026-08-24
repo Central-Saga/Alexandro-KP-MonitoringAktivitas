@@ -18,7 +18,6 @@ import {
   uploadActivityMedia,
   type Activity,
   type ActivityStatus,
-  type OperationalActivityStatus,
 } from "../../services/activity-service";
 import { getProjects, type Project } from "../../services/project-service";
 import { getProjectTasks, type ProjectTask } from "../../services/project-task-service";
@@ -35,15 +34,10 @@ type CreateForm = {
   description: string;
 };
 
-const operationalStatuses: Array<{ value: OperationalActivityStatus; label: string }> = [
-  { value: "pending", label: "Pending" },
-  { value: "ongoing", label: "Sedang Berjalan" },
-  { value: "selesai", label: "Selesai — kirim untuk review" },
-];
 const statusLabels: Record<ActivityStatus, string> = {
-  pending: "Pending",
-  ongoing: "Berjalan",
-  selesai: "Menunggu Review",
+  pending: "Menunggu Validasi",
+  ongoing: "Menunggu Validasi",
+  selesai: "Menunggu Validasi",
   approved: "Disetujui",
   rejected: "Perlu Revisi",
 };
@@ -205,9 +199,9 @@ function DailyActivityInput({ projects, tasks, projectsLoading, tasksLoading, re
         title: form.title.trim(),
         description: form.description.trim() || null,
         activity_date: form.activity_date,
-        // Create tidak menawarkan pilihan status agar catatan baru selalu
-        // mengikuti antrean workflow dari pending.
-        status: "pending",
+        // Submit aktivitas baru langsung berstatus selesai (Menunggu Validasi)
+        // agar segera masuk antrean validasi Project Manager.
+        status: "selesai",
       });
 
       let notice: Notice = { tone: "success", message: response.message };
@@ -311,7 +305,7 @@ function TodaySummary({ refreshVersion }: { refreshVersion: number }) {
     return () => { active = false; };
   }, [refreshVersion, retryVersion, today]);
 
-  const labels = ["Aktivitas Hari Ini", "Menunggu Review", "Disetujui"];
+  const labels = ["Aktivitas Hari Ini", "Menunggu Validasi", "Disetujui"];
   const tones = ["bg-green-50 text-green-700", "bg-amber-50 text-amber-700", "bg-blue-50 text-blue-700"];
   return <section className="overflow-hidden rounded-2xl border border-[#dce4ec] bg-white shadow-sm" aria-busy={loading}>
     <header className="border-b border-[#e1e7ee] px-5 py-4"><h2 className="font-bold text-[#172b4d]">Ringkasan Hari Ini</h2><p className="mt-1 text-xs text-[#71829a]">{formatDate(today)}</p></header>
@@ -352,7 +346,12 @@ function ActivityHistory({ projects, projectsLoading, refreshVersion, onNotice }
       <div className="grid gap-3 border-b border-[#e1e7ee] p-4 md:grid-cols-2 xl:grid-cols-5 sm:p-6">
         <label className="relative xl:col-span-2"><span className="sr-only">Cari aktivitas</span><AdminIcon name="search" className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#91a0b3]" /><input type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Cari judul aktivitas..." className="h-11 w-full rounded-xl border border-[#dce4ec] pl-11 pr-3 text-sm" /></label>
         <select disabled={projectsLoading} value={projectId ?? ""} onChange={(event) => { setProjectId(event.target.value ? Number(event.target.value) : undefined); setPage(1); }} aria-label="Filter project" className="h-11 rounded-xl border border-[#dce4ec] bg-white px-3 text-sm disabled:bg-[#f5f7fa]"><option value="">Semua Project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
-        <select value={status} onChange={(event) => { setStatus(event.target.value as ActivityStatus | ""); setPage(1); }} aria-label="Filter status" className="h-11 rounded-xl border border-[#dce4ec] bg-white px-3 text-sm"><option value="">Semua Status</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+        <select value={status} onChange={(event) => { setStatus(event.target.value as ActivityStatus | ""); setPage(1); }} aria-label="Filter status" className="h-11 rounded-xl border border-[#dce4ec] bg-white px-3 text-sm">
+          <option value="">Semua Status</option>
+          <option value="selesai">Menunggu Validasi</option>
+          <option value="approved">Disetujui</option>
+          <option value="rejected">Perlu Revisi</option>
+        </select>
         <div className="grid grid-cols-2 gap-2"><label><span className="sr-only">Tanggal mulai</span><input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} className="h-11 w-full rounded-xl border border-[#dce4ec] px-2 text-xs" /></label><label><span className="sr-only">Tanggal akhir</span><input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} className="h-11 w-full rounded-xl border border-[#dce4ec] px-2 text-xs" /></label></div>
       </div>
       {activitiesState.error ? <ErrorState onRetry={activitiesState.refetch} /> : <ActivityTable activities={activitiesState.data} loading={activitiesState.isLoading} emptyText={filtered ? "Belum ada aktivitas yang cocok." : "Belum ada riwayat aktivitas."} assignedProjectIds={assignedProjectIds} onEdit={(activity) => setDialog({ type: "edit", activity })} onMedia={(activity) => setDialog({ type: "media", activity })} />}
@@ -375,7 +374,11 @@ function ActivityTable({ activities, loading, emptyText, assignedProjectIds, onE
 
 function EditActivityDialog({ activity, onClose, onSuccess }: { activity: Activity; onClose: () => void; onSuccess: (message: string) => void }) {
   const { user } = useAuth();
-  const [form, setForm] = useState({ title: activity.title, description: activity.description ?? "", activity_date: activity.activity_date.slice(0, 10), status: (activity.status === "rejected" ? "pending" : activity.status) as OperationalActivityStatus });
+  const [form, setForm] = useState({
+    title: activity.title,
+    description: activity.description ?? "",
+    activity_date: activity.activity_date.slice(0, 10),
+  });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<LaravelFieldErrors>({});
@@ -391,7 +394,14 @@ function EditActivityDialog({ activity, onClose, onSuccess }: { activity: Activi
     if (!user || activity.project_id === null) return;
     setSaving(true);
     try {
-      const response = await updateActivity(activity.id, { project_id: activity.project_id, user_id: user.id, title: form.title.trim(), description: form.description.trim() || null, activity_date: form.activity_date, status: form.status });
+      const response = await updateActivity(activity.id, {
+        project_id: activity.project_id,
+        user_id: user.id,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        activity_date: form.activity_date,
+        status: "selesai",
+      });
       onSuccess(response.message);
     } catch (requestError) {
       setErrors(parseLaravelError(requestError instanceof ApiError ? requestError.data : null).errors ?? {});
@@ -399,14 +409,16 @@ function EditActivityDialog({ activity, onClose, onSuccess }: { activity: Activi
     } finally { setSaving(false); }
   }
 
-  return <AdminDialog title="Edit Aktivitas" onClose={onClose}><form onSubmit={submit} className="space-y-4 p-5 sm:p-6">
-    {activity.status === "rejected" && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"><p className="font-semibold">Aktivitas perlu direvisi.</p><p className="mt-1">{activity.rejection_reason ?? "Alasan revisi tidak tersedia."}</p><p className="mt-2 text-xs">Status dimulai kembali dari Pending. Pilih Selesai saat revisi siap direview.</p></div>}
+  const isRevision = activity.status === "rejected";
+
+  return <AdminDialog title={isRevision ? "Revisi Aktivitas" : "Edit Aktivitas"} onClose={onClose}><form onSubmit={submit} className="space-y-4 p-5 sm:p-6">
+    {isRevision && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"><p className="font-semibold">Aktivitas perlu direvisi.</p><p className="mt-1">{activity.rejection_reason ?? "Alasan revisi tidak tersedia."}</p><p className="mt-2 text-xs">Setelah diperbaiki, klik Kirim Ulang agar aktivitas masuk kembali ke antrean validasi.</p></div>}
     <dl className="grid gap-3 rounded-xl bg-[#f5f7fa] p-4 text-sm sm:grid-cols-2"><Detail label="Project" value={activity.project?.name ?? "—"} /><Detail label="Task" value={activity.task?.title ?? "—"} /></dl>
     <FormField id="edit-title" label="Judul Aktivitas" error={firstFieldError(errors, "title")}><input id="edit-title" required maxLength={255} value={form.title} onChange={(event) => change("title", event.target.value)} aria-describedby={fieldDescriptionId("edit-title", errors.title)} className="h-11 w-full rounded-xl border border-[#dce4ec] px-3" /></FormField>
     <FormField id="edit-description" label="Aktivitas yang Dilakukan" error={firstFieldError(errors, "description")}><textarea id="edit-description" rows={4} value={form.description} onChange={(event) => change("description", event.target.value)} aria-describedby={fieldDescriptionId("edit-description", errors.description)} className="w-full rounded-xl border border-[#dce4ec] p-3" /></FormField>
-    <div className="grid gap-4 sm:grid-cols-2"><FormField id="edit-date" label="Tanggal" error={firstFieldError(errors, "activity_date")}><input id="edit-date" type="date" required value={form.activity_date} onChange={(event) => change("activity_date", event.target.value)} aria-describedby={fieldDescriptionId("edit-date", errors.activity_date)} className="h-11 w-full rounded-xl border border-[#dce4ec] px-3" /></FormField><FormField id="edit-status" label="Status" error={firstFieldError(errors, "status")}><select id="edit-status" value={form.status} onChange={(event) => change("status", event.target.value as OperationalActivityStatus)} aria-describedby={fieldDescriptionId("edit-status", errors.status)} className="h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3">{operationalStatuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormField></div>
+    <FormField id="edit-date" label="Tanggal" error={firstFieldError(errors, "activity_date")}><input id="edit-date" type="date" required value={form.activity_date} onChange={(event) => change("activity_date", event.target.value)} aria-describedby={fieldDescriptionId("edit-date", errors.activity_date)} className="h-11 w-full rounded-xl border border-[#dce4ec] px-3" /></FormField>
     {message && <p role="alert" className="text-sm text-red-600">{message}</p>}
-    <DialogActions saving={saving} onClose={onClose} submitLabel="Simpan Perubahan" />
+    <DialogActions saving={saving} onClose={onClose} submitLabel={isRevision ? "Kirim Ulang" : "Simpan Perubahan"} />
   </form></AdminDialog>;
 }
 
@@ -429,12 +441,11 @@ function MediaUploadDialog({ activity, onClose, onSuccess }: { activity: Activit
 function ReviewSummary({ activity }: { activity: Activity }) {
   if (activity.status === "rejected") return <div className="max-w-xs text-xs text-red-700"><p className="font-semibold">Perlu revisi{activity.rejected_by ? ` dari ${activity.rejected_by.name}` : ""}</p><p className="mt-1 leading-5">{activity.rejection_reason ?? "Alasan tidak tersedia"}</p>{activity.rejected_at && <p className="mt-1 text-[#71829a]">{formatDateTime(activity.rejected_at)}</p>}</div>;
   if (activity.status === "approved") return <div className="text-xs text-green-700"><p className="font-semibold">Disetujui{activity.approved_by ? ` oleh ${activity.approved_by.name}` : ""}</p>{activity.approved_at && <p className="mt-1 text-[#71829a]">{formatDateTime(activity.approved_at)}</p>}</div>;
-  if (activity.status === "selesai") return <span className="text-xs text-amber-700">Menunggu keputusan reviewer</span>;
-  return <span className="text-xs text-[#91a0b3]">Belum dikirim untuk review</span>;
+  return <span className="text-xs text-amber-700">Menunggu validasi Project Manager</span>;
 }
 
 function ActivityBadge({ status }: { status: ActivityStatus }) {
-  const tone = status === "approved" ? "bg-green-100 text-green-700" : status === "rejected" ? "bg-red-100 text-red-700" : status === "selesai" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700";
+  const tone = status === "approved" ? "bg-green-100 text-green-700" : status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700";
   return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{statusLabels[status]}</span>;
 }
 

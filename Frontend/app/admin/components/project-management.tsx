@@ -109,7 +109,21 @@ export default function ProjectManagement() {
   );
 }
 
-function ProjectTable({ projects, isLoading, onView, onEdit, onMembers }: {
+const PROJECT_STATUS_OPTIONS = [
+  { value: "perencanaan", label: "Perencanaan" },
+  { value: "berlangsung", label: "Berlangsung" },
+  { value: "selesai", label: "Selesai" },
+  { value: "ditunda", label: "Ditunda" },
+  { value: "dibatalkan", label: "Dibatalkan" },
+];
+
+function ProjectTable({
+  projects,
+  isLoading,
+  onView,
+  onEdit,
+  onMembers,
+}: {
   projects: Project[];
   isLoading: boolean;
   onView: (project: Project) => void;
@@ -119,27 +133,91 @@ function ProjectTable({ projects, isLoading, onView, onEdit, onMembers }: {
   return (
     <div className="max-w-full overflow-x-auto">
       <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-        <thead className="bg-[#f1f4f8] text-[#60738f]"><tr><th className="px-5 py-3 font-semibold">Proyek</th><th className="px-5 py-3 font-semibold">Client</th><th className="px-5 py-3 font-semibold">Project Manager</th><th className="px-5 py-3 font-semibold">Periode</th><th className="px-5 py-3 font-semibold">Anggota Aktif</th><th className="px-5 py-3 font-semibold">Status</th><th className="px-5 py-3 text-center font-semibold">Aksi</th></tr></thead>
+        <thead className="bg-[#f1f4f8] text-[#60738f]">
+          <tr>
+            <th className="px-5 py-3 font-semibold">Proyek</th>
+            <th className="px-5 py-3 font-semibold">Nama Klien</th>
+            <th className="px-5 py-3 font-semibold">Project Manager</th>
+            <th className="px-5 py-3 font-semibold">Periode</th>
+            <th className="px-5 py-3 font-semibold">Anggota Aktif</th>
+            <th className="px-5 py-3 font-semibold">Status</th>
+            <th className="px-5 py-3 text-center font-semibold">Aksi</th>
+          </tr>
+        </thead>
         <tbody>
-          {isLoading ? <TableMessage message="Memuat data project..." /> : projects.length === 0 ? <TableMessage message="Belum ada project yang cocok dengan pencarian atau filter." /> : projects.map((project) => (
-            <tr key={project.id} className="border-b border-[#e1e7ee] last:border-0">
-              <td className="px-5 py-4"><p className="font-semibold text-[#172b4d]">{project.name}</p></td>
-              <td className="px-5 py-4 text-[#60738f]">{project.client_name || "—"}</td>
-              <td className="px-5 py-4 text-[#60738f]">{project.project_manager?.name ?? "—"}</td>
-              <td className="px-5 py-4 text-[#60738f]">{formatDate(project.start_date)} – {formatDate(project.end_date)}</td>
-              <td className="px-5 py-4 font-semibold text-[#172b4d]">{project.active_assignments_count}</td>
-              <td className="px-5 py-4"><StatusBadge status={project.status} /></td>
-              <td className="px-5 py-4"><div className="flex justify-center gap-2"><ActionButton label="Lihat detail" icon="eye" onClick={() => onView(project)} /><ActionButton label="Edit project" icon="edit" onClick={() => onEdit(project)} /><ActionButton label="Kelola anggota" icon="users" onClick={() => onMembers(project)} /></div></td>
-            </tr>
-          ))}
+          {isLoading ? (
+            <TableMessage message="Memuat data proyek..." />
+          ) : projects.length === 0 ? (
+            <TableMessage message="Belum ada proyek yang cocok dengan pencarian atau filter." />
+          ) : (
+            projects.map((project) => (
+              <tr
+                key={project.id}
+                className="border-b border-[#e1e7ee] last:border-0 hover:bg-slate-50/60"
+              >
+                <td className="px-5 py-4">
+                  <p className="font-semibold text-[#172b4d]">{project.name}</p>
+                </td>
+                <td className="px-5 py-4 text-[#60738f]">{project.client_name || "—"}</td>
+                <td className="px-5 py-4 text-[#60738f]">
+                  {project.project_manager?.name ?? "—"}
+                </td>
+                <td className="px-5 py-4 text-[#60738f]">
+                  {formatDate(project.start_date)} – {formatDate(project.end_date)}
+                </td>
+                <td className="px-5 py-4 font-semibold text-[#172b4d]">
+                  {project.active_assignments_count}
+                </td>
+                <td className="px-5 py-4">
+                  <StatusBadge status={project.status} />
+                </td>
+                <td className="px-5 py-4">
+                  <div className="flex justify-center gap-2">
+                    <ActionButton
+                      label="Lihat detail"
+                      icon="eye"
+                      onClick={() => onView(project)}
+                    />
+                    <ActionButton
+                      label="Edit proyek"
+                      icon="edit"
+                      onClick={() => onEdit(project)}
+                    />
+                    <ActionButton
+                      label="Kelola anggota"
+                      icon="users"
+                      onClick={() => onMembers(project)}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
-function ProjectFormDialog({ mode, projectId, onClose, onSuccess }: { mode: "create" | "edit"; projectId?: number; onClose: () => void; onSuccess: (message: string) => void }) {
-  const [form, setForm] = useState({ project_manager_id: 0, name: "", client_name: "", start_date: "", end_date: "", status: "" });
+function ProjectFormDialog({
+  mode,
+  projectId,
+  onClose,
+  onSuccess,
+}: {
+  mode: "create" | "edit";
+  projectId?: number;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}) {
+  const [form, setForm] = useState({
+    project_manager_id: 0,
+    name: "",
+    client_name: "",
+    start_date: "",
+    end_date: "",
+    status: mode === "create" ? "berlangsung" : "",
+  });
   const [managers, setManagers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -148,21 +226,45 @@ function ProjectFormDialog({ mode, projectId, onClose, onSuccess }: { mode: "cre
 
   useEffect(() => {
     let active = true;
-    // Kandidat PM berasal dari User API dan difilter lagi oleh backend saat
-    // mutation; dropdown bukan satu-satunya lapisan authorization.
-    const managerRequest = getUsers({ role: "project_manager", status: "active", page: 1, perPage: 100 });
-    const projectRequest = mode === "edit" && projectId ? getProject(projectId) : Promise.resolve(null);
-    void Promise.all([managerRequest, projectRequest]).then(([users, projectResponse]) => {
-      if (!active) return;
-      setManagers(users.data);
-      if (projectResponse) {
-        const project = projectResponse.data;
-        setForm({ project_manager_id: project.project_manager_id, name: project.name, client_name: project.client_name, start_date: project.start_date, end_date: project.end_date ?? "", status: project.status });
-      } else if (users.data[0]) {
-        setForm((current) => ({ ...current, project_manager_id: users.data[0].id }));
-      }
-    }).catch((error) => setMessage(getErrorMessage(error, "Form project gagal dimuat."))).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const managerRequest = getUsers({
+      role: "project_manager",
+      status: "active",
+      page: 1,
+      perPage: 100,
+    });
+    const projectRequest =
+      mode === "edit" && projectId ? getProject(projectId) : Promise.resolve(null);
+
+    void Promise.all([managerRequest, projectRequest])
+      .then(([users, projectResponse]) => {
+        if (!active) return;
+        setManagers(users.data);
+        if (projectResponse) {
+          const project = projectResponse.data;
+          setForm({
+            project_manager_id: project.project_manager_id,
+            name: project.name,
+            client_name: project.client_name,
+            start_date: project.start_date,
+            end_date: project.end_date ?? "",
+            status: project.status,
+          });
+        } else if (users.data[0]) {
+          setForm((current) => ({
+            ...current,
+            project_manager_id: users.data[0].id,
+          }));
+        }
+      })
+      .catch((error) =>
+        setMessage(getErrorMessage(error, "Form proyek gagal dimuat.")),
+      )
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [mode, projectId]);
 
   function change(field: keyof typeof form, value: string | number) {
@@ -175,7 +277,10 @@ function ProjectFormDialog({ mode, projectId, onClose, onSuccess }: { mode: "cre
     setMessage("");
     setErrors({});
     const clientErrors = validateProject(form);
-    if (Object.keys(clientErrors).length) { setErrors(clientErrors); return; }
+    if (Object.keys(clientErrors).length) {
+      setErrors(clientErrors);
+      return;
+    }
     setSaving(true);
     const payload: ProjectPayload = {
       project_manager_id: form.project_manager_id,
@@ -186,29 +291,190 @@ function ProjectFormDialog({ mode, projectId, onClose, onSuccess }: { mode: "cre
       ...(form.status.trim() ? { status: form.status.trim() } : {}),
     };
     try {
-      const response = mode === "create" ? await createProject(payload) : await updateProject(projectId!, payload);
+      const response =
+        mode === "create"
+          ? await createProject(payload)
+          : await updateProject(projectId!, payload);
       onSuccess(response.message);
     } catch (error) {
-      // Laravel 422 dipetakan kembali ke field agar admin dapat memperbaiki
-      // payload tanpa kehilangan nilai form yang sudah diisi.
-      setErrors(parseLaravelError(error instanceof ApiError ? error.data : null).errors ?? {});
-      setMessage(getErrorMessage(error, "Project gagal disimpan."));
-    } finally { setSaving(false); }
+      setErrors(
+        parseLaravelError(error instanceof ApiError ? error.data : null)
+          .errors ?? {},
+      );
+      setMessage(getErrorMessage(error, "Proyek gagal disimpan."));
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (loading) return <AdminDialog title={mode === "create" ? "Tambah Proyek" : "Edit Proyek"} onClose={onClose}><p className="p-6 text-sm text-[#71829a]">Memuat form project...</p></AdminDialog>;
+  if (loading) {
+    return (
+      <AdminDialog
+        title={mode === "create" ? "Tambah Proyek" : "Edit Proyek"}
+        maxWidth="max-w-2xl sm:max-w-3xl lg:max-w-[880px]"
+        onClose={onClose}
+      >
+        <div className="p-8 text-center text-sm text-[#71829a]">
+          Memuat data proyek...
+        </div>
+      </AdminDialog>
+    );
+  }
 
   return (
-    <AdminDialog title={mode === "create" ? "Tambah Proyek" : "Edit Proyek"} onClose={onClose}>
-      <form onSubmit={submit} className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
-        <Field id="project-name" label="Nama Proyek" value={form.name} error={firstFieldError(errors, "name")} onChange={(value) => change("name", value)} />
-        <Field id="project-client" label="Client" value={form.client_name} error={firstFieldError(errors, "client_name")} onChange={(value) => change("client_name", value)} />
-        <label className="block text-sm font-semibold text-[#172b4d] sm:col-span-2">Project Manager<select required value={form.project_manager_id || ""} onChange={(event) => change("project_manager_id", Number(event.target.value))} className="mt-2 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-4 font-normal outline-none focus:border-[#43a956]"><option value="" disabled>Pilih Project Manager</option>{managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name}</option>)}</select>{firstFieldError(errors, "project_manager_id") && <span className="mt-1 block text-xs font-normal text-red-600">{firstFieldError(errors, "project_manager_id")}</span>}{managers.length === 0 && <span className="mt-1 block text-xs font-normal text-amber-700">Tidak ada Project Manager aktif yang tersedia.</span>}</label>
-        <Field id="project-start" label="Tanggal Mulai" type="date" value={form.start_date} error={firstFieldError(errors, "start_date")} onChange={(value) => change("start_date", value)} />
-        <Field id="project-end" label="Tanggal Selesai" type="date" required={false} value={form.end_date} error={firstFieldError(errors, "end_date")} onChange={(value) => change("end_date", value)} />
-        {mode === "edit" && <Field id="project-status" label="Status" value={form.status} error={firstFieldError(errors, "status")} onChange={(value) => change("status", value)} />}
-        {message && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{message}</p>}
-        <div className="flex justify-end gap-2 pt-2 sm:col-span-2"><button type="button" onClick={onClose} className="rounded-xl border border-[#dce4ec] px-4 py-2.5 text-sm font-semibold text-[#60738f]">Batal</button><button type="submit" disabled={saving || managers.length === 0} className="rounded-xl bg-[#43a956] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan"}</button></div>
+    <AdminDialog
+      title={mode === "create" ? "Tambah Proyek" : "Edit Proyek"}
+      maxWidth="max-w-2xl sm:max-w-3xl lg:max-w-[880px]"
+      onClose={onClose}
+    >
+      <form onSubmit={submit} className="space-y-4 p-5 sm:p-6">
+        {message && (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700"
+          >
+            {message}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Row 1: Nama Proyek & Nama Klien */}
+          <Field
+            id="project-name"
+            label="Nama Proyek"
+            placeholder="Contoh: Sistem Monitoring Aktivitas"
+            value={form.name}
+            error={firstFieldError(errors, "name")}
+            onChange={(value) => change("name", value)}
+          />
+          <Field
+            id="project-client"
+            label="Nama Klien"
+            placeholder="Contoh: PT Citra Mandiri"
+            value={form.client_name}
+            error={firstFieldError(errors, "client_name")}
+            onChange={(value) => change("client_name", value)}
+          />
+
+          {/* Row 2: Project Manager (Full Width) */}
+          <label
+            htmlFor="project-manager-select"
+            className="block text-sm font-semibold text-[#172b4d] sm:col-span-2"
+          >
+            Project Manager
+            <select
+              id="project-manager-select"
+              required
+              value={form.project_manager_id || ""}
+              onChange={(event) =>
+                change("project_manager_id", Number(event.target.value))
+              }
+              aria-invalid={Boolean(firstFieldError(errors, "project_manager_id"))}
+              className="mt-1.5 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+            >
+              <option value="" disabled>
+                Pilih Project Manager
+              </option>
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id}>
+                  {manager.name}
+                  {manager.division ? ` — Divisi ${manager.division.name}` : ""}
+                </option>
+              ))}
+              {managers.every((m) => m.id !== form.project_manager_id) &&
+                form.project_manager_id > 0 && (
+                  <option value={form.project_manager_id}>
+                    Project Manager saat ini (ID: {form.project_manager_id})
+                  </option>
+                )}
+            </select>
+            {firstFieldError(errors, "project_manager_id") && (
+              <span className="mt-1 block text-xs font-normal text-red-600">
+                {firstFieldError(errors, "project_manager_id")}
+              </span>
+            )}
+            {managers.length === 0 && (
+              <span className="mt-1 block text-xs font-normal text-amber-700">
+                Tidak ada Project Manager aktif yang tersedia.
+              </span>
+            )}
+          </label>
+
+          {/* Row 3: Tanggal Mulai & Tanggal Selesai */}
+          <Field
+            id="project-start"
+            label="Tanggal Mulai"
+            type="date"
+            value={form.start_date}
+            error={firstFieldError(errors, "start_date")}
+            onChange={(value) => change("start_date", value)}
+          />
+          <Field
+            id="project-end"
+            label="Tanggal Selesai"
+            type="date"
+            required={false}
+            value={form.end_date}
+            error={firstFieldError(errors, "end_date")}
+            onChange={(value) => change("end_date", value)}
+          />
+
+          {/* Row 4: Status (Dropdown) */}
+          <label
+            htmlFor="project-status-select"
+            className="block text-sm font-semibold text-[#172b4d] sm:col-span-2"
+          >
+            Status
+            <select
+              id="project-status-select"
+              value={form.status}
+              onChange={(event) => change("status", event.target.value)}
+              aria-invalid={Boolean(firstFieldError(errors, "status"))}
+              className="mt-1.5 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+            >
+              <option value="" disabled>
+                Pilih Status Proyek
+              </option>
+              {PROJECT_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+              {form.status &&
+                !PROJECT_STATUS_OPTIONS.some((opt) => opt.value === form.status) && (
+                  <option value={form.status}>{formatStatus(form.status)}</option>
+                )}
+            </select>
+            {firstFieldError(errors, "status") && (
+              <span className="mt-1 block text-xs font-normal text-red-600">
+                {firstFieldError(errors, "status")}
+              </span>
+            )}
+          </label>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex justify-end gap-2.5 border-t border-[#e1e7ee] pt-4">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onClose}
+            className="rounded-xl border border-[#dce4ec] bg-white px-4 py-2.5 text-sm font-semibold text-[#60738f] hover:bg-slate-50 disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={saving || (mode === "create" && managers.length === 0)}
+            className="rounded-xl bg-[#43a956] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#18a84f] focus:outline-none focus:ring-2 focus:ring-[#43a956]/30 disabled:opacity-50"
+          >
+            {saving
+              ? "Menyimpan..."
+              : mode === "create"
+                ? "Tambah Proyek"
+                : "Simpan Perubahan"}
+          </button>
+        </div>
       </form>
     </AdminDialog>
   );
@@ -217,8 +483,44 @@ function ProjectFormDialog({ mode, projectId, onClose, onSuccess }: { mode: "cre
 function ProjectDetailDialog({ projectId, onClose }: { projectId: number; onClose: () => void }) {
   const [project, setProject] = useState<Project | null>(null);
   const [message, setMessage] = useState("");
-  useEffect(() => { let active = true; void getProject(projectId).then((response) => { if (active) setProject(response.data); }).catch((error) => { if (active) setMessage(getErrorMessage(error, "Detail project gagal dimuat.")); }); return () => { active = false; }; }, [projectId]);
-  return <AdminDialog title="Detail Proyek" onClose={onClose}><div className="p-5 sm:p-6">{message ? <p role="alert" className="text-sm text-red-600">{message}</p> : !project ? <p className="text-sm text-[#71829a]">Memuat detail project...</p> : <dl className="grid gap-5 sm:grid-cols-2"><Detail label="Nama Proyek" value={project.name} /><Detail label="Client" value={project.client_name || "—"} /><Detail label="Project Manager" value={project.project_manager?.name ?? "—"} /><Detail label="Status" value={formatStatus(project.status)} /><Detail label="Tanggal Mulai" value={formatDate(project.start_date)} /><Detail label="Tanggal Selesai" value={formatDate(project.end_date)} /><Detail label="Anggota Aktif" value={String(project.active_assignments_count)} /><Detail label="Progress" value="Belum tersedia dari backend" /></dl>}</div></AdminDialog>;
+  useEffect(() => {
+    let active = true;
+    void getProject(projectId)
+      .then((response) => {
+        if (active) setProject(response.data);
+      })
+      .catch((error) => {
+        if (active) setMessage(getErrorMessage(error, "Detail proyek gagal dimuat."));
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
+
+  return (
+    <AdminDialog title="Detail Proyek" onClose={onClose}>
+      <div className="p-5 sm:p-6">
+        {message ? (
+          <p role="alert" className="text-sm text-red-600">
+            {message}
+          </p>
+        ) : !project ? (
+          <p className="text-sm text-[#71829a]">Memuat detail proyek...</p>
+        ) : (
+          <dl className="grid gap-5 sm:grid-cols-2">
+            <Detail label="Nama Proyek" value={project.name} />
+            <Detail label="Nama Klien" value={project.client_name || "—"} />
+            <Detail label="Project Manager" value={project.project_manager?.name ?? "—"} />
+            <Detail label="Status" value={formatStatus(project.status)} />
+            <Detail label="Tanggal Mulai" value={formatDate(project.start_date)} />
+            <Detail label="Tanggal Selesai" value={formatDate(project.end_date)} />
+            <Detail label="Anggota Aktif" value={String(project.active_assignments_count)} />
+            <Detail label="Progress" value="Belum tersedia dari backend" />
+          </dl>
+        )}
+      </div>
+    </AdminDialog>
+  );
 }
 
 function ProjectMembersDialog({ project, onClose, onMutation }: { project: Project; onClose: () => void; onMutation: () => void }) {
@@ -292,14 +594,153 @@ function ProjectMembersDialog({ project, onClose, onMutation }: { project: Proje
   );
 }
 
-function Field({ id, label, value, onChange, error, type = "text", required = true }: { id: string; label: string; value: string; onChange: (value: string) => void; error: string; type?: string; required?: boolean }) { return <label htmlFor={id} className="block text-sm font-semibold text-[#172b4d]">{label}<input id={id} type={type} required={required} value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={Boolean(error)} className="mt-2 h-11 w-full rounded-xl border border-[#dce4ec] px-3 font-normal outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20" />{error && <span className="mt-1 block text-xs font-normal text-red-600">{error}</span>}</label>; }
-function Detail({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs text-[#71829a]">{label}</dt><dd className="mt-1 font-medium text-[#172b4d]">{value}</dd></div>; }
-function ActionButton({ label, icon, onClick }: { label: string; icon: "eye" | "edit" | "users"; onClick: () => void }) { return <button type="button" aria-label={label} title={label} onClick={onClick} className="rounded-lg border border-[#dce4ec] p-2 text-[#60738f] hover:border-[#43a956] hover:text-[#2f9e44]"><AdminIcon name={icon} className="h-4 w-4" /></button>; }
-function StatusBadge({ status }: { status: string }) { return <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">{formatStatus(status)}</span>; }
-function AssignmentBadge({ status }: { status: ProjectAssignment["status"] }) { return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === "aktif" ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}>{status === "aktif" ? "Aktif" : "Nonaktif"}</span>; }
-function TableMessage({ message }: { message: string }) { return <tr><td colSpan={7} className="px-6 py-16 text-center text-[#71829a]">{message}</td></tr>; }
-function ErrorState({ onRetry }: { onRetry: () => void }) { return <div className="px-6 py-16 text-center"><p className="font-semibold text-red-700">Data project gagal dimuat.</p><button type="button" onClick={onRetry} className="mt-4 rounded-xl bg-[#43a956] px-4 py-2 text-sm font-semibold text-white">Coba Lagi</button></div>; }
-function formatStatus(status: string) { return status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
-function formatDate(value: string | null) { if (!value) return "—"; const [year, month, day] = value.slice(0, 10).split("-").map(Number); return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(year, month - 1, day)); }
-function validateProject(form: { project_manager_id: number; name: string; client_name: string; start_date: string; end_date: string }): LaravelFieldErrors { const errors: LaravelFieldErrors = {}; if (!form.project_manager_id) errors.project_manager_id = ["Project Manager wajib dipilih."]; if (!form.name.trim()) errors.name = ["Nama project wajib diisi."]; if (!form.client_name.trim()) errors.client_name = ["Client wajib diisi."]; if (!form.start_date) errors.start_date = ["Tanggal mulai wajib diisi."]; if (form.end_date && form.start_date && form.end_date < form.start_date) errors.end_date = ["Tanggal selesai tidak boleh sebelum tanggal mulai."]; return errors; }
-function getErrorMessage(error: unknown, fallback: string) { if (!(error instanceof ApiError)) return "Tidak dapat terhubung ke server."; if (error.status === 403) return "Anda tidak memiliki izin untuk melakukan tindakan ini."; if (error.status === 404) return "Data project tidak ditemukan."; if (error.status >= 500) return "Server sedang bermasalah. Silakan coba lagi."; return error.message || fallback; }
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+  required = true,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error: string;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <label htmlFor={id} className="block text-sm font-semibold text-[#172b4d]">
+      {label}
+      <input
+        id={id}
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={Boolean(error)}
+        className="mt-1.5 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+      />
+      {error && (
+        <span className="mt-1 block text-xs font-normal text-red-600">{error}</span>
+      )}
+    </label>
+  );
+}
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-[#71829a]">{label}</dt>
+      <dd className="mt-1 font-medium text-[#172b4d]">{value}</dd>
+    </div>
+  );
+}
+function ActionButton({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon: "eye" | "edit" | "users";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="rounded-lg border border-[#dce4ec] p-2 text-[#60738f] hover:border-[#43a956] hover:text-[#2f9e44]"
+    >
+      <AdminIcon name={icon} className="h-4 w-4" />
+    </button>
+  );
+}
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+      {formatStatus(status)}
+    </span>
+  );
+}
+function AssignmentBadge({ status }: { status: ProjectAssignment["status"] }) {
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+        status === "aktif"
+          ? "bg-green-100 text-green-700"
+          : "bg-slate-200 text-slate-600"
+      }`}
+    >
+      {status === "aktif" ? "Aktif" : "Nonaktif"}
+    </span>
+  );
+}
+function TableMessage({ message }: { message: string }) {
+  return (
+    <tr>
+      <td colSpan={7} className="px-6 py-16 text-center text-[#71829a]">
+        {message}
+      </td>
+    </tr>
+  );
+}
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="px-6 py-16 text-center">
+      <p className="font-semibold text-red-700">Data proyek gagal dimuat.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 rounded-xl bg-[#43a956] px-4 py-2 text-sm font-semibold text-white"
+      >
+        Coba Lagi
+      </button>
+    </div>
+  );
+}
+function formatStatus(status: string) {
+  return status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+function validateProject(form: {
+  project_manager_id: number;
+  name: string;
+  client_name: string;
+  start_date: string;
+  end_date: string;
+}): LaravelFieldErrors {
+  const errors: LaravelFieldErrors = {};
+  if (!form.project_manager_id)
+    errors.project_manager_id = ["Project Manager wajib dipilih."];
+  if (!form.name.trim()) errors.name = ["Nama proyek wajib diisi."];
+  if (!form.client_name.trim()) errors.client_name = ["Nama klien wajib diisi."];
+  if (!form.start_date) errors.start_date = ["Tanggal mulai wajib diisi."];
+  if (form.end_date && form.start_date && form.end_date < form.start_date)
+    errors.end_date = ["Tanggal selesai tidak boleh sebelum tanggal mulai."];
+  return errors;
+}
+function getErrorMessage(error: unknown, fallback: string) {
+  if (!(error instanceof ApiError)) return "Tidak dapat terhubung ke server.";
+  if (error.status === 403)
+    return "Anda tidak memiliki izin untuk melakukan tindakan ini.";
+  if (error.status === 404) return "Data proyek tidak ditemukan.";
+  if (error.status >= 500)
+    return "Server sedang bermasalah. Silakan coba lagi.";
+  return error.message || fallback;
+}

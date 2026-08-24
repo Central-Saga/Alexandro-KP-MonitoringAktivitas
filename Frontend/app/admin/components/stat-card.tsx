@@ -23,17 +23,17 @@ export default function StatCard({
   tone,
 }: StatCardProps) {
   return (
-    <article className="rounded-2xl border border-[#dce4ec] bg-white p-6 shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
-      <div className="flex items-start justify-between gap-4">
+    <article className="rounded-2xl border border-[#dce4ec] bg-white p-4 sm:p-5 shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[15px] text-[#60738f]">{title}</p>
-          <p className="mt-3 text-3xl font-bold text-[#172b4d]">{value}</p>
+          <p className="text-xs font-semibold text-[#60738f]">{title}</p>
+          <p className="mt-1 text-2xl sm:text-3xl font-bold text-[#172b4d]">{value}</p>
         </div>
-        <div className={`flex h-13 w-13 items-center justify-center rounded-xl ${tones[tone]}`}>
-          <AdminIcon name={icon} className="h-6 w-6" />
+        <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl ${tones[tone]}`}>
+          <AdminIcon name={icon} className="h-5 w-5" />
         </div>
       </div>
-      <p className="mt-3 text-sm text-[#71829a]">{detail}</p>
+      <p className="mt-2 text-xs text-[#71829a]">{detail}</p>
     </article>
   );
 }

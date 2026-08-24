@@ -90,10 +90,10 @@ class ActivityController extends Controller
         if ($user->hasRole('karyawan')) {
             $data['user_id'] = $user->id;
 
-            // Submit awal Karyawan selalu masuk antrean pending. Nilai status
-            // dari client tidak dipercaya agar API langsung tidak dapat
-            // melewati lifecycle operasional Activity.
-            $data['status'] = ActivityStatus::PENDING->value;
+            // Submit awal Karyawan langsung berstatus siap review (selesai).
+            // Nilai status dari client tidak dipercaya agar konsisten
+            // dengan alur antrean validasi Project Manager.
+            $data['status'] = ActivityStatus::SELESAI->value;
 
             // Pastikan karyawan memang ditugaskan
             // secara aktif pada project tersebut.
@@ -210,6 +210,10 @@ class ActivityController extends Controller
         if ($user->hasRole('karyawan')) {
             $data['user_id'] = $activity->user_id;
             $data['project_id'] = $activity->project_id;
+
+            // Karyawan yang mengedit / mengirim ulang aktivitas (termasuk revisi)
+            // selalu menempatkan status aktivitas kembali ke antrean validasi (selesai).
+            $data['status'] = ActivityStatus::SELESAI->value;
 
             if ($activity->project_id) {
                 $assigned = ProjectAssignment::where(
