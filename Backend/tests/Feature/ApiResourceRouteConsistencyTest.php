@@ -89,7 +89,7 @@ class ApiResourceRouteConsistencyTest extends TestCase
         // DELETE /api/activities/{id} (destroy oleh Admin)
         Sanctum::actingAs($admin);
         $this->deleteJson("/api/activities/{$activityId}")->assertOk();
-        $this->assertDatabaseMissing('activities', ['id' => $activityId]);
+        $this->assertSoftDeleted('activities', ['id' => $activityId]);
     }
 
     public function test_standard_project_routes_work_properly(): void
@@ -123,7 +123,7 @@ class ApiResourceRouteConsistencyTest extends TestCase
 
         // DELETE /api/projects/{id}
         $this->deleteJson("/api/projects/{$projectId}")->assertOk();
-        $this->assertDatabaseMissing('projects', ['id' => $projectId]);
+        $this->assertSoftDeleted('projects', ['id' => $projectId]);
     }
 
     public function test_standard_and_custom_project_task_routes_work_properly(): void
