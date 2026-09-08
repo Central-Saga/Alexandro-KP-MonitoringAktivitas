@@ -1,26 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-brand-dark: #030303;
+  --color-brand-primary: #016273;
+  --color-brand-primary-hover: #014d5a;
+  --color-brand-accent: #E1F25F;
+  --color-brand-accent-hover: #d4e64f;
+  --color-brand-soft: #EAF7FB;
+  --color-surface: #FFFFFF;
+  --background: #EAF7FB;
+  --foreground: #030303;
 }
 
 @theme inline {
+  --color-brand-dark: #030303;
+  --color-brand-primary: #016273;
+  --color-brand-primary-hover: #014d5a;
+  --color-brand-accent: #E1F25F;
+  --color-brand-accent-hover: #d4e64f;
+  --color-brand-soft: #EAF7FB;
+  --color-surface: #FFFFFF;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: #EAF7FB;
+  color: #030303;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media print {
+  @page {
+    size: auto;
+    margin: 12mm 15mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #172b4d !important;
+  }
+
+  /* Reset layout constraints so full multi-page content is printable */
+  div,
+  main,
+  section {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Hide admin shell navigation, sidebar, topbar, filter form, tabs, and action buttons */
+  aside,
+  header:not(.print-report-header),
+  nav,
+  form,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Prevent page break inside table rows and KPI cards */
+  tr,
+  article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Ensure background colors and borders print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

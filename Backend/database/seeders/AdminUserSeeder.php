@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class AdminUserSeeder extends Seeder
 {
@@ -18,7 +19,12 @@ class AdminUserSeeder extends Seeder
         // updateOrCreate digunakan supaya jika seeder
         // dijalankan berkali-kali, akun Admin tidak
         // dibuat menjadi duplikat.
-        User::updateOrCreate(
+        Role::firstOrCreate([
+            'name' => 'admin',
+            'guard_name' => 'web',
+        ]);
+
+        $admin = User::updateOrCreate(
             [
                 // Email yang digunakan Admin untuk login.
                 'email' => 'admin@csm.com',
@@ -36,5 +42,7 @@ class AdminUserSeeder extends Seeder
                 'role' => 'admin',
             ]
         );
+
+        $admin->syncRoles('admin');
     }
 }

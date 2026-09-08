@@ -13,31 +13,39 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Role harus tersedia sebelum user dihubungkan ke RBAC Spatie.
+        $this->call(PermissionSeeder::class);
+
         // 1. Akun Admin Utama
-        User::factory()->create([
+        $admin = User::factory()->create([
             'name' => 'Admin CSM',
             'email' => 'admin@csm.com',
             'role' => 'admin',
             'password' => Hash::make('password123'),
         ]);
+        $admin->syncRoles('admin');
 
-        // 2. Akun Supervisor
-        User::factory()->create([
-            'name' => 'Supervisor CSM',
-            'email' => 'supervisor@csm.com',
-            'role' => 'supervisor',
+        // 2. Akun Project Manager
+        $projectManager = User::factory()->create([
+            'name' => 'Project_manager',
+            'email' => 'project_manager@csm.com',
+            'role' => 'project_manager',
             'password' => Hash::make('password123'),
         ]);
+        $projectManager->syncRoles('project_manager');
 
         // 3. Akun Karyawan
-        User::factory()->create([
+        $karyawan = User::factory()->create([
             'name' => 'Karyawan CSM',
             'email' => 'karyawan@csm.com',
             'role' => 'karyawan',
             'password' => Hash::make('password123'),
         ]);
+        $karyawan->syncRoles('karyawan');
 
         // 4. Generate 10 Karyawan Dummy Tambahan via Factory
-        User::factory(10)->create();
+        User::factory(10)->create()->each(
+            fn (User $user) => $user->syncRoles('karyawan')
+        );
     }
 }

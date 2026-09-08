@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +19,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (
+            ! $user
+            || ! $user->is_active
+            || ! Hash::check($request->password, $user->password)
+        ) {
+            // Akun nonaktif memakai respons kredensial yang sama agar status
+            // internal akun tidak dapat ditebak dari endpoint publik.
             throw ValidationException::withMessages([
                 'email' => ['Kredensial yang diberikan salah.'],
             ]);
@@ -27,22 +34,29 @@ class AuthController extends Controller
         // Buat token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        activity('authentication')
+            ->causedBy($user)
+            ->event('login')
+            ->log('Login ke sistem');
+
         return response()->json([
             'message' => 'Login berhasil',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-            ]
+            'user' => (new UserResource($user))->resolve($request),
         ]);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        activity('authentication')
+            ->causedBy($user)
+            ->event('logout')
+            ->log('Logout dari sistem');
+
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logout berhasil'
