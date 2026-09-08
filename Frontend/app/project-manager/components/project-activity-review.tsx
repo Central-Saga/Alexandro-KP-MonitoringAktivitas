@@ -14,6 +14,7 @@ import {
 } from "../../services/activity-service";
 import { getProjects, type Project } from "../../services/project-service";
 import type { PaginationMeta } from "../../services/user-service";
+import { FormattedActivityDescription } from "../../components/structured-activity-editor";
 
 const statusLabels: Record<ActivityStatus, string> = {
   pending: "Pending",
@@ -420,9 +421,9 @@ function ActivityCards({
               <h3 className="text-sm font-bold text-[#030303]">
                 {activity.title}
               </h3>
-              <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#5a737e] sm:text-sm">
-                {activity.description || "Tanpa deskripsi."}
-              </p>
+              <div className="mt-2.5">
+                <FormattedActivityDescription description={activity.description} />
+              </div>
               <p className="mt-3 text-[11px] font-medium text-[#5a737e]">
                 Tanggal aktivitas: {formatDate(activity.activity_date)}
               </p>

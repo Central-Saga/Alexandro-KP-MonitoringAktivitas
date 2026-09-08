@@ -16,6 +16,10 @@ import {
   type LaravelFieldErrors,
 } from "../../lib/validation";
 import {
+  StructuredActivityEditor,
+  FormattedActivityDescription,
+} from "../../components/structured-activity-editor";
+import {
   createActivity,
   getTodayActivitySummary,
   updateActivity,
@@ -119,11 +123,19 @@ export default function EmployeeActivities() {
 
   return (
     <main className="space-y-6 p-4 sm:p-7">
-      <header>
-        <h1 className="text-2xl font-bold text-[#172b4d]">Aktivitas Saya</h1>
-        <p className="mt-1 text-sm text-[#71829a]">
-          Catat dan pantau aktivitas kerja harian Anda.
-        </p>
+      <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-[#172b4d]">
+            Pelaporan Aktivitas Kerja
+          </h2>
+          <p className="mt-0.5 text-xs text-[#71829a]">
+            Catat hasil pekerjaan harian, kendala teknis, dan rencana tindak lanjut Anda.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Laporan Terstruktur Aktif</span>
+        </div>
       </header>
 
       {notice && (
@@ -543,20 +555,17 @@ function DailyActivityInput({
             />
           </FormField>
 
-          <FormField
-            id="daily-description"
-            label="Deskripsi Aktivitas"
-            error={firstFieldError(errors, "description")}
-          >
-            <textarea
-              id="daily-description"
-              rows={4}
+          <div className="pt-1">
+            <StructuredActivityEditor
+              idPrefix="daily"
               value={form.description}
-              onChange={(event) => change("description", event.target.value)}
-              placeholder="Tuliskan hasil pekerjaan utama yang dilakukan."
-              className="w-full rounded-xl border border-[#dce4ec] p-3 text-xs outline-none placeholder:text-[#91a0b3] focus:border-[#18a84f] focus:ring-2 focus:ring-[#18a84f]/20"
+              onChange={(nextDescription) =>
+                change("description", nextDescription)
+              }
+              error={firstFieldError(errors, "description")}
+              required
             />
-          </FormField>
+          </div>
 
           <FormField
             id="daily-file"
@@ -1075,9 +1084,12 @@ function ActivityTable({
                     <p className="font-semibold text-[#172b4d]">
                       {activity.title}
                     </p>
-                    <p className="mt-0.5 line-clamp-2 max-w-xs text-xs text-[#71829a]">
-                      {activity.description || "Tanpa deskripsi"}
-                    </p>
+                    <div className="mt-1">
+                      <FormattedActivityDescription
+                        description={activity.description}
+                        compact
+                      />
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
                     <ActivityBadge status={activity.status} />
@@ -1245,19 +1257,17 @@ function EditActivityDialog({
           />
         </FormField>
 
-        <FormField
-          id="edit-description"
-          label="Deskripsi Aktivitas"
-          error={firstFieldError(errors, "description")}
-        >
-          <textarea
-            id="edit-description"
-            rows={4}
+        <div className="pt-1">
+          <StructuredActivityEditor
+            idPrefix="edit"
             value={form.description}
-            onChange={(event) => change("description", event.target.value)}
-            className="w-full rounded-xl border border-[#dce4ec] p-3 text-xs outline-none focus:border-[#18a84f] focus:ring-2 focus:ring-[#18a84f]/20"
+            onChange={(nextDescription) =>
+              change("description", nextDescription)
+            }
+            error={firstFieldError(errors, "description")}
+            required
           />
-        </FormField>
+        </div>
 
         <FormField
           id="edit-date"
@@ -1702,6 +1712,10 @@ function validateCreate(form: CreateForm): LaravelFieldErrors {
   if (!form.project_task_id)
     errors.project_task_id = ["Tugas proyek aktif wajib dipilih."];
   if (!form.title.trim()) errors.title = ["Aktivitas wajib diisi."];
+  if (!form.description?.trim())
+    errors.description = [
+      "Hasil pekerjaan atau deskripsi aktivitas wajib diisi.",
+    ];
   return errors;
 }
 
