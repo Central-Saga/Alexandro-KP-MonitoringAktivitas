@@ -11,11 +11,11 @@ const statusLabel: Record<string, string> = {
 };
 
 const statusTone: Record<string, string> = {
-  approved: "bg-green-100 text-green-700",
-  ongoing: "bg-blue-100 text-blue-700",
-  pending: "bg-amber-100 text-amber-700",
-  rejected: "bg-red-100 text-red-700",
-  selesai: "bg-amber-100 text-amber-700",
+  approved: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+  ongoing: "bg-[#EAF7FB] text-[#016273] ring-1 ring-inset ring-[#016273]/20",
+  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20",
+  selesai: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
 };
 
 type RecentActivityTableProps = {
@@ -26,12 +26,12 @@ type RecentActivityTableProps = {
 
 export default function RecentActivityTable({ activities, isLoading, hasError }: RecentActivityTableProps) {
   return (
-    <section className="rounded-2xl border border-[#dce4ec] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
-      <header className="flex items-center justify-between border-b border-[#e1e7ee] px-6 py-5">
-        <h2 className="font-bold text-[#172b4d]">Aktivitas Terbaru</h2>
+    <section className="rounded-2xl border border-[#d0e6ed] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <header className="flex items-center justify-between border-b border-[#d0e6ed] px-6 py-5">
+        <h2 className="font-bold text-[#030303]">Aktivitas Terbaru</h2>
         <Link
           href="/admin/activities"
-          className="rounded-xl border border-[#43a956] px-4 py-2 text-sm font-semibold text-[#2f9e44] hover:bg-green-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#43a956]"
+          className="rounded-xl border border-[#016273]/30 px-4 py-2 text-sm font-semibold text-[#016273] hover:bg-[#EAF7FB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#016273]"
         >
           Lihat Semua
         </Link>
@@ -39,7 +39,7 @@ export default function RecentActivityTable({ activities, isLoading, hasError }:
 
       <div className="overflow-x-auto p-6" aria-busy={isLoading}>
         <table className="w-full min-w-[780px] border-collapse text-left text-sm">
-          <thead className="bg-[#f1f4f8] text-[#60738f]">
+          <thead className="bg-[#EAF7FB] text-[#030303]">
             <tr>
               <th className="px-4 py-3 font-semibold">Karyawan</th>
               <th className="px-4 py-3 font-semibold">Divisi</th>
@@ -57,15 +57,15 @@ export default function RecentActivityTable({ activities, isLoading, hasError }:
               <MessageRow message="Belum ada aktivitas terbaru." />
             ) : (
               activities.map((activity) => (
-                <tr key={activity.id} className="border-b border-[#e1e7ee] last:border-0">
-                  <td className="px-4 py-4 font-medium text-[#172b4d]">{activity.user?.name ?? "—"}</td>
-                  <td className="px-4 py-4 text-[#60738f]">{activity.user?.division?.name ?? "—"}</td>
-                  <td className="px-4 py-4 font-medium text-[#172b4d]">
+                <tr key={activity.id} className="border-b border-[#d0e6ed] hover:bg-[#EAF7FB]/40 transition-colors last:border-0">
+                  <td className="px-4 py-4 font-medium text-[#030303]">{activity.user?.name ?? "—"}</td>
+                  <td className="px-4 py-4 text-[#5a737e]">{activity.user?.division?.name ?? "—"}</td>
+                  <td className="px-4 py-4 font-medium text-[#030303]">
                     <p>{activity.title}</p>
-                    <p className="mt-1 text-xs font-normal text-[#71829a]">{activity.project?.name ?? "—"}</p>
+                    <p className="mt-1 text-xs font-normal text-[#5a737e]">{activity.project?.name ?? "—"}</p>
                     <MediaList items={activity.media} />
                   </td>
-                  <td className="px-4 py-4 text-[#60738f]">{formatDate(activity.activity_date)}</td>
+                  <td className="px-4 py-4 text-[#5a737e]">{formatDate(activity.activity_date)}</td>
                   <td className="px-4 py-4">
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone[activity.status] ?? "bg-slate-100 text-slate-600"}`}>
                       {statusLabel[activity.status] ?? activity.status}

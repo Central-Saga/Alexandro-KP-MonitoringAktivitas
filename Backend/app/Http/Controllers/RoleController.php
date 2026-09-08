@@ -95,6 +95,8 @@ class RoleController extends Controller
         }
 
         $role = $this->service->create($data);
+        activity('role')->causedBy($request->user())->performedOn($role)->event('created')
+            ->withProperty('subject_name', $role->name)->log("Membuat role {$role->name}");
 
         return response()->json([
             'message' => 'Role berhasil dibuat.',
@@ -150,6 +152,8 @@ class RoleController extends Controller
         }
 
         $role = $this->service->update($role, $data);
+        activity('role')->causedBy($request->user())->performedOn($role)->event('updated')
+            ->withProperty('subject_name', $role->name)->log("Mengubah hak akses {$role->name}");
 
         return response()->json([
             'message' => 'Role berhasil diperbarui.',

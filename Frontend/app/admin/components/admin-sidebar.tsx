@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BrandLogo from "../../components/brand-logo";
 import { AdminIcon, type AdminIconName } from "./admin-icons";
 
 const navigation: Array<{ href: string; label: string; icon: AdminIconName }> = [
@@ -12,7 +13,6 @@ const navigation: Array<{ href: string; label: string; icon: AdminIconName }> = 
   { href: "/admin/projects", label: "Manajemen Proyek", icon: "project" },
   { href: "/admin/activities", label: "Monitoring Aktivitas", icon: "chart" },
   { href: "/admin/reports", label: "Laporan", icon: "activity" },
-  { href: "/admin/profile", label: "Profil", icon: "user" },
 ];
 
 type AdminSidebarProps = {
@@ -35,70 +35,123 @@ export default function AdminSidebar({
           type="button"
           aria-label="Tutup menu"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-950/45 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-xs transition-opacity lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[286px] flex-col bg-[#205a35] text-white transition-transform duration-200 lg:static lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-[#016273] text-white shadow-2xl transition-transform duration-300 ease-out lg:static lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        <div className="flex h-[82px] items-center border-b border-white/10 px-6">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#43a956]">
-            <AdminIcon name="shield" className="h-6 w-6" />
-          </div>
-          <div className="ml-3">
-            <p className="text-lg font-bold leading-tight">WorkTrack</p>
-            <p className="text-xs text-white/65">Monitoring System</p>
-          </div>
+        {/* Brand Header */}
+        <div className="flex h-[76px] items-center justify-between border-b border-white/10 px-5">
+          <BrandLogo size="md" textVariant="sidebar" />
           <button
             type="button"
             onClick={onClose}
             aria-label="Tutup sidebar"
-            className="ml-auto rounded-lg p-2 text-white/70 lg:hidden"
+            className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
           >
             <AdminIcon name="x" className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mx-5 mt-4 rounded-xl bg-white/10 px-4 py-3">
-          <p className="text-xs text-white/60">Role Aktif</p>
-          <p className="mt-1 text-sm font-bold">Administrator</p>
+        {/* Active Role Card */}
+        <div className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.07] px-3.5 py-2.5 backdrop-blur-sm">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#E1F25F]/90">
+              Role Aktif
+            </p>
+            <p className="truncate text-xs font-bold tracking-wide text-white">
+              Administrator
+            </p>
+          </div>
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#E1F25F] opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#E1F25F]" />
+          </span>
         </div>
 
-        <nav className="mt-6 space-y-1 px-3">
+        {/* Navigation List */}
+        <nav className="mt-6 space-y-1.5 px-3 pb-4">
           {navigation.map((item) => {
             const active = pathname === item.href;
+
+            if (active) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className="group relative flex h-[50px] items-center gap-3 rounded-2xl bg-[#004f5d] px-2.5 text-white shadow-[0_4px_16px_rgba(225,242,95,0.18)] ring-1 ring-[#E1F25F]/35 transition-all duration-200"
+                >
+                  {/* Floating Icon Bubble */}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E1F25F] text-[#016273] shadow-sm ring-2 ring-[#E1F25F]/40 transition-transform duration-200 group-hover:scale-105">
+                    <AdminIcon name={item.icon} className="h-4 w-4 stroke-[2.2]" />
+                  </div>
+                  <span className="truncate text-[14px] font-bold tracking-wide text-white">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            }
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] transition ${active ? "bg-[#43a956] font-semibold text-white" : "text-white/75 hover:bg-white/10 hover:text-white"}`}
+                className="group flex h-[42px] items-center gap-3 rounded-xl px-2.5 text-[13.5px] font-medium text-white/70 transition-all duration-150 hover:bg-white/[0.08] hover:text-white"
               >
-                <AdminIcon name={item.icon} className="h-5 w-5" />
-                {item.label}
+                {/* Standard Icon Container for alignment */}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center">
+                  <AdminIcon
+                    name={item.icon}
+                    className="h-[18px] w-[18px] text-white/60 transition-colors group-hover:text-white"
+                  />
+                </div>
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto border-t border-white/10 px-3 py-5">
+        {/* Bottom Section: Settings & Logout */}
+        <div className="mt-auto border-t border-white/10 px-3 py-3.5 space-y-1">
           <Link
             href="/admin/settings"
             onClick={onClose}
-            className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] ${pathname === "/admin/settings" ? "bg-[#43a956] font-semibold" : "text-white/75 hover:bg-white/10 hover:text-white"}`}
+            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] transition-all duration-150 ${
+              pathname === "/admin/settings"
+                ? "bg-white/15 font-semibold text-white shadow-sm ring-1 ring-[#E1F25F]/30"
+                : "font-medium text-white/70 hover:bg-white/[0.08] hover:text-white"
+            }`}
           >
-            <AdminIcon name="settings" className="h-5 w-5" />
-            Pengaturan
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+              <AdminIcon
+                name="settings"
+                className={`h-4 w-4 transition-colors ${
+                  pathname === "/admin/settings"
+                    ? "text-[#E1F25F]"
+                    : "text-white/60 group-hover:text-white"
+                }`}
+              />
+            </div>
+            <span>Pengaturan</span>
           </Link>
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-[15px] text-white/75 hover:bg-white/10 hover:text-white"
+            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-white/65 transition-all duration-150 hover:bg-rose-500/15 hover:text-rose-200"
           >
-            <AdminIcon name="logout" className="h-5 w-5" />
-            Logout
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+              <AdminIcon
+                name="logout"
+                className="h-4 w-4 text-white/55 transition-colors group-hover:text-rose-300"
+              />
+            </div>
+            <span>Logout</span>
           </button>
         </div>
       </aside>

@@ -10,8 +10,12 @@ export default function EmployeeShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f7fa]">
-      <EmployeeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={() => void logout()} />
+    <div className="flex h-screen overflow-hidden bg-[#EAF7FB]">
+      <EmployeeSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={() => void logout()}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <EmployeeTopbar onOpenMenu={() => setSidebarOpen(true)} />
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>

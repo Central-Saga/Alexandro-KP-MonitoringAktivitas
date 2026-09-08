@@ -15,7 +15,7 @@ class ActivityRepository implements ActivityRepositoryInterface
         // Semua relasi resource dimuat di depan agar list tidak menambah query
         // untuk tiap activity, user, division, approver, atau media.
         $query = Activity::query()->with([
-            'user.division', 'project', 'projectTask', 'approver', 'rejector', 'media',
+            'user.division', 'project', 'projectTask', 'approver', 'rejector', 'reviews.actor', 'media',
         ]);
 
         if ($user->hasRole('karyawan')) {
@@ -55,8 +55,32 @@ class ActivityRepository implements ActivityRepositoryInterface
             $query->whereDate('activity_date', '<=', $filters['date_to']);
         }
 
-        return $query->latest('activity_date')->latest('id')
-            ->paginate($filters['per_page'] ?? 10)->withQueryString();
+        if (($filters['status'] ?? null) === 'rejected') {
+            $query->latest('updated_at')->latest('id');
+        } else {
+            $query->latest('activity_date')->latest('id');
+        }
+
+        return $query->paginate($filters['per_page'] ?? 10)->withQueryString();
+    }
+
+    public function todaySummary(User $user, string $date): array
+    {
+        $summary = Activity::query()
+            ->where('user_id', $user->id)
+            ->whereDate('activity_date', $date)
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS waiting_validation", ['selesai'])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS approved", ['approved'])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS needs_revision", ['rejected'])
+            ->first();
+
+        return [
+            'total' => (int) ($summary?->total ?? 0),
+            'waiting_validation' => (int) ($summary?->waiting_validation ?? 0),
+            'approved' => (int) ($summary?->approved ?? 0),
+            'needs_revision' => (int) ($summary?->needs_revision ?? 0),
+        ];
     }
 
     public function findById(int $id): ?Activity
@@ -107,6 +131,6 @@ class ActivityRepository implements ActivityRepositoryInterface
 
     private function relations(): array
     {
-        return ['user.division', 'project', 'projectTask', 'approver', 'rejector', 'media'];
+        return ['user.division', 'project', 'projectTask', 'approver', 'rejector', 'reviews.actor', 'media'];
     }
 }

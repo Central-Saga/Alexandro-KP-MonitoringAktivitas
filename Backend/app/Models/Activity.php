@@ -6,8 +6,7 @@ use App\Enums\ActivityStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -27,7 +26,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 ])]
 class Activity extends Model implements HasMedia
 {
-    use InteractsWithMedia, LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * Mendefinisikan casting atribut model.
@@ -76,6 +75,11 @@ class Activity extends Model implements HasMedia
         return $this->belongsTo(User::class, 'rejected_by');
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ActivityReview::class)->oldest('created_at')->oldest('id');
+    }
+
     /**
      * Mendefinisikan collection untuk file/bukti activity.
      *
@@ -85,27 +89,5 @@ class Activity extends Model implements HasMedia
     {
         $this->addMediaCollection('activity_files')
             ->useDisk('public');
-    }
-
-    /**
-     * Mengatur konfigurasi activity log.
-     *
-     * Hanya perubahan atribut yang relevan dengan activity
-     * yang akan dicatat oleh Spatie Activity Log.
-     */
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly([
-                'user_id',
-                'project_id',
-                'project_task_id',
-                'title',
-                'description',
-                'status',
-                'activity_date',
-            ])
-            ->logOnlyDirty()
-            ->useLogName('activity');
     }
 }

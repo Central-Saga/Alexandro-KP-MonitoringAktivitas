@@ -53,10 +53,10 @@ class ApiResourceRouteConsistencyTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.title', 'Aktivitas Baru');
 
-        // PUT /api/activities/{id} (update)
+        // Activity yang sedang menunggu validasi bersifat read-only untuk Karyawan.
         $this->putJson("/api/activities/{$activityId}", [
             'title' => 'Aktivitas Diperbarui',
-        ])->assertOk()->assertJsonPath('data.title', 'Aktivitas Diperbarui');
+        ])->assertForbidden();
 
         // POST /api/activities/{id}/media (custom action)
         $this->postJson("/api/activities/{$activityId}/media", [
@@ -72,8 +72,16 @@ class ApiResourceRouteConsistencyTest extends TestCase
             'rejection_reason' => 'Perlu penyesuaian laporan.',
         ])->assertOk()->assertJsonPath('data.status', 'rejected');
 
-        // Ajukan kembali lalu approve oleh PM
-        Activity::query()->where('id', $activityId)->update(['status' => ActivityStatus::SELESAI]);
+        // PUT /api/activities/{id}: perbaiki dan kirim ulang setelah rejected.
+        Sanctum::actingAs($employee);
+        $this->putJson("/api/activities/{$activityId}", [
+            'title' => 'Aktivitas Diperbarui',
+        ])->assertOk()
+            ->assertJsonPath('data.title', 'Aktivitas Diperbarui')
+            ->assertJsonPath('data.status', 'selesai');
+
+        // Approve setelah aktivitas benar-benar dikirim ulang.
+        Sanctum::actingAs($manager);
         $this->postJson("/api/activities/{$activityId}/approve")
             ->assertOk()
             ->assertJsonPath('data.status', 'approved');

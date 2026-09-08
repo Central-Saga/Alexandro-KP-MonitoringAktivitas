@@ -79,6 +79,10 @@ class ProjectAssignmentController extends Controller
         $data['project_id'] = $project->id;
         $data['status'] ??= 'aktif';
         $assignment = ProjectAssignment::query()->create($data);
+        $employeeName = $assignment->user()->value('name');
+        activity('project_assignment')->causedBy($request->user())->performedOn($assignment)->event('created')
+            ->withProperty('subject_name', $employeeName)
+            ->log("Menambahkan {$employeeName} ke proyek {$project->name}");
         $this->invalidateScopeCaches();
 
         return response()->json([
@@ -118,6 +122,10 @@ class ProjectAssignmentController extends Controller
         }
 
         $assignment->update($data);
+        $employeeName = $assignment->user()->value('name');
+        activity('project_assignment')->causedBy($request->user())->performedOn($assignment)->event('updated')
+            ->withProperty('subject_name', $employeeName)
+            ->log("Mengubah penugasan {$employeeName} pada proyek {$project->name}");
         $this->invalidateScopeCaches();
 
         return response()->json([

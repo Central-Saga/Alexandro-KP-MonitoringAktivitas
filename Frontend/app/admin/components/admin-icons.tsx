@@ -10,11 +10,17 @@ export type AdminIconName =
   | "edit"
   | "eye"
   | "filter"
+  | "check-circle"
+  | "key"
+  | "log-in"
+  | "log-out"
   | "logout"
   | "menu"
   | "project"
   | "print"
   | "power"
+  | "plus"
+  | "rotate"
   | "search"
   | "settings"
   | "shield"
@@ -38,11 +44,17 @@ export function AdminIcon({
     edit: <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />,
     eye: <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />,
     filter: <path d="M4 5h16l-6 7v5l-4 2v-7Z" />,
+    "check-circle": <path d="M22 11.1V12a10 10 0 1 1-5.9-9.1M22 4 12 14.01l-3-3" />,
+    key: <path d="M21 2 13.6 9.4M15 4l5 5M9.5 14.5a5 5 0 1 1-7.1 7.1 5 5 0 0 1 7.1-7.1ZM6 18h.01" />,
+    "log-in": <path d="m15 3 4 4-4 4M19 7H8m2 14H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />,
+    "log-out": <path d="m17 7 4 5-4 5m4-5H9m2 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6" />,
     logout: <path d="M10 17l5-5-5-5m5 5H3m12-9h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     project: <path d="M9 5h6m-7 3h8M7 3h10a2 2 0 0 1 2 2v16H5V5a2 2 0 0 1 2-2Zm2 10 2 2 4-4" />,
     print: <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6Z" />,
     power: <path d="M12 2v10m6.4-6.4a9 9 0 1 1-12.8 0" />,
+    plus: <path d="M12 5v14M5 12h14" />,
+    rotate: <path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" />,
     search: <path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />,
     settings: <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-3.5c0-.5-.1-1-.2-1.5l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2.6-1.5L14 2.5h-4l-.3 2.6a8 8 0 0 0-2.6 1.5l-2.4-1-2 3.4 2 1.5a8 8 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2.6 1.5l.3 2.6h4l.3-2.6a8 8 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.5Z" />,
     shield: <path d="M12 3 20 6v5c0 5-3.4 9-8 10-4.6-1-8-5-8-10V6l8-3Zm-3 9 2 2 4-4" />,

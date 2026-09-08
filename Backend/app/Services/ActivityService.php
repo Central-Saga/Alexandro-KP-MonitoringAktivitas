@@ -38,6 +38,11 @@ class ActivityService implements ActivityServiceInterface
         );
     }
 
+    public function todaySummary(User $user, string $date): array
+    {
+        return $this->repository->todaySummary($user, $date);
+    }
+
     public function getById(int $id): ?Activity
     {
         return $this->repository->findById($id);
@@ -52,10 +57,25 @@ class ActivityService implements ActivityServiceInterface
         return $activity;
     }
 
-    public function update(Activity $activity, array $data): Activity
+    public function update(Activity $activity, array $data, ?User $actor = null): Activity
     {
         $this->ensureValidTaskLink($data, $activity);
-        $activity = $this->repository->update($activity, $data);
+        $isResubmission = $actor?->hasRole('karyawan')
+            && $activity->user_id === $actor->id
+            && $activity->status === ActivityStatus::REJECTED;
+
+        $activity = DB::transaction(function () use ($activity, $data, $actor, $isResubmission) {
+            $activity = $this->repository->update($activity, $data);
+
+            if ($isResubmission && $activity->exists) {
+                $activity->reviews()->create([
+                    'actor_id' => $actor->id,
+                    'action' => 'resubmitted',
+                ]);
+            }
+
+            return $activity->exists ? $activity->fresh($this->reviewRelations()) : $activity;
+        });
         $this->cache->invalidate(QueryCache::ACTIVITIES);
 
         return $activity;
@@ -76,11 +96,11 @@ class ActivityService implements ActivityServiceInterface
     {
         $activity = DB::transaction(function () use ($activity, $actor) {
             $activity = $this->repository->findForUpdate($activity->id);
-            $this->ensureTransition($activity, [ActivityStatus::SELESAI, ActivityStatus::REJECTED], 'disetujui');
+            $this->ensureTransition($activity, [ActivityStatus::SELESAI], 'disetujui');
 
             // Metadata rejection dibersihkan saat hasil review diperbaiki dan
             // disetujui kembali melalui endpoint audit khusus.
-            return $this->repository->update($activity, [
+            $activity = $this->repository->update($activity, [
                 'status' => ActivityStatus::APPROVED,
                 'approved_by' => $actor->id,
                 'approved_at' => now(),
@@ -88,6 +108,14 @@ class ActivityService implements ActivityServiceInterface
                 'rejected_at' => null,
                 'rejection_reason' => null,
             ]);
+            if ($activity->exists) {
+                $activity->reviews()->create([
+                    'actor_id' => $actor->id,
+                    'action' => 'approved',
+                ]);
+            }
+
+            return $activity->exists ? $activity->fresh($this->reviewRelations()) : $activity;
         });
 
         $this->cache->invalidate(QueryCache::ACTIVITIES);
@@ -99,9 +127,9 @@ class ActivityService implements ActivityServiceInterface
     {
         $activity = DB::transaction(function () use ($activity, $actor, $reason) {
             $activity = $this->repository->findForUpdate($activity->id);
-            $this->ensureTransition($activity, [ActivityStatus::SELESAI, ActivityStatus::APPROVED], 'ditolak');
+            $this->ensureTransition($activity, [ActivityStatus::SELESAI], 'diminta revisi');
 
-            return $this->repository->update($activity, [
+            $activity = $this->repository->update($activity, [
                 'status' => ActivityStatus::REJECTED,
                 'approved_by' => null,
                 'approved_at' => null,
@@ -109,6 +137,15 @@ class ActivityService implements ActivityServiceInterface
                 'rejected_at' => now(),
                 'rejection_reason' => $reason,
             ]);
+            if ($activity->exists) {
+                $activity->reviews()->create([
+                    'actor_id' => $actor->id,
+                    'action' => 'revision_requested',
+                    'note' => $reason,
+                ]);
+            }
+
+            return $activity->exists ? $activity->fresh($this->reviewRelations()) : $activity;
         });
 
         $this->cache->invalidate(QueryCache::ACTIVITIES);
@@ -194,5 +231,13 @@ class ActivityService implements ActivityServiceInterface
                 'project_task_id' => ['Assignment Karyawan pada project sudah tidak aktif.'],
             ]);
         }
+    }
+
+    private function reviewRelations(): array
+    {
+        return [
+            'user.division', 'project', 'projectTask', 'approver',
+            'rejector', 'reviews.actor', 'media',
+        ];
     }
 }

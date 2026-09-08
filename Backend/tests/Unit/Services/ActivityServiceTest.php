@@ -100,6 +100,7 @@ class ActivityServiceTest extends TestCase
         $service->paginate($actor, []);
         $approved = $service->approve($activity, $actor);
         $service->paginate($actor, []);
+        $approved->forceFill(['status' => ActivityStatus::SELESAI]);
         $rejected = $service->reject($approved, $actor, 'Bukti kurang');
         $service->paginate($actor, []);
 

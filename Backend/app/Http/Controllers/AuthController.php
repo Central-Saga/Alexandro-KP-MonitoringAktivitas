@@ -34,6 +34,11 @@ class AuthController extends Controller
         // Buat token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        activity('authentication')
+            ->causedBy($user)
+            ->event('login')
+            ->log('Login ke sistem');
+
         return response()->json([
             'message' => 'Login berhasil',
             'access_token' => $token,
@@ -44,7 +49,14 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        activity('authentication')
+            ->causedBy($user)
+            ->event('logout')
+            ->log('Logout dari sistem');
+
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logout berhasil'

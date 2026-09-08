@@ -55,33 +55,46 @@ export default function ProjectManagement() {
     <main className="space-y-6 p-4 sm:p-7">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#172b4d]">Manajemen Proyek</h1>
-          <p className="mt-1 text-sm text-[#60738f]">
+          <h1 className="text-2xl font-bold text-[#030303]">Manajemen Proyek</h1>
+          <p className="mt-1 text-sm text-[#5a737e]">
             {projectsState.error || projectsState.isLoading ? "Kelola project dan penugasan anggota" : `${projectsState.data.length} project terdaftar`}
           </p>
         </div>
-        <button type="button" onClick={() => setDialog({ type: "create" })} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18a84f] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#149344]">
+        <button
+          type="button"
+          onClick={() => setDialog({ type: "create" })}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#016273] px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#014d5a]"
+        >
           <span aria-hidden="true" className="text-xl leading-none">+</span> Tambah Proyek
         </button>
       </header>
 
       {successMessage && (
-        <div role="status" className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div role="status" className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <span>{successMessage}</span>
           <button type="button" aria-label="Tutup pesan" onClick={() => setSuccessMessage("")}><AdminIcon name="x" className="h-4 w-4" /></button>
         </div>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-[#dce4ec] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
-        <div className="grid gap-3 border-b border-[#e1e7ee] p-4 sm:grid-cols-[minmax(0,1fr)_220px] sm:p-6">
+      <section className="overflow-hidden rounded-2xl border border-[#d0e6ed] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div className="grid gap-3 border-b border-[#d0e6ed] p-4 sm:grid-cols-[minmax(0,1fr)_220px] sm:p-6">
           <label className="relative">
             <span className="sr-only">Cari project</span>
-            <AdminIcon name="search" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#71829a]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama proyek, client, atau Project Manager..." className="h-12 w-full rounded-xl border border-[#dce4ec] pl-12 pr-4 text-sm outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20" />
+            <AdminIcon name="search" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8399a2]" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Cari nama proyek, client, atau Project Manager..."
+              className="h-12 w-full rounded-xl border border-[#c8dfe8] pl-12 pr-4 text-sm text-[#030303] outline-none placeholder:text-[#8399a2] focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
+            />
           </label>
           <label>
             <span className="sr-only">Filter status</span>
-            <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-12 w-full rounded-xl border border-[#dce4ec] bg-white px-4 text-sm text-[#60738f] outline-none focus:border-[#43a956]">
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className="h-12 w-full rounded-xl border border-[#c8dfe8] bg-white px-4 text-sm text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
+            >
               <option value="">Semua status</option>
               {statuses.map((value) => <option key={value} value={value}>{formatStatus(value)}</option>)}
             </select>
@@ -133,7 +146,7 @@ function ProjectTable({
   return (
     <div className="max-w-full overflow-x-auto">
       <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-        <thead className="bg-[#f1f4f8] text-[#60738f]">
+        <thead className="bg-[#EAF7FB] text-[#030303]">
           <tr>
             <th className="px-5 py-3 font-semibold">Proyek</th>
             <th className="px-5 py-3 font-semibold">Nama Klien</th>
@@ -153,19 +166,19 @@ function ProjectTable({
             projects.map((project) => (
               <tr
                 key={project.id}
-                className="border-b border-[#e1e7ee] last:border-0 hover:bg-slate-50/60"
+                className="border-b border-[#d0e6ed] last:border-0 hover:bg-[#EAF7FB]/40 transition-colors"
               >
                 <td className="px-5 py-4">
-                  <p className="font-semibold text-[#172b4d]">{project.name}</p>
+                  <p className="font-semibold text-[#030303]">{project.name}</p>
                 </td>
-                <td className="px-5 py-4 text-[#60738f]">{project.client_name || "—"}</td>
-                <td className="px-5 py-4 text-[#60738f]">
+                <td className="px-5 py-4 text-[#5a737e]">{project.client_name || "—"}</td>
+                <td className="px-5 py-4 text-[#5a737e]">
                   {project.project_manager?.name ?? "—"}
                 </td>
-                <td className="px-5 py-4 text-[#60738f]">
+                <td className="px-5 py-4 text-[#5a737e]">
                   {formatDate(project.start_date)} – {formatDate(project.end_date)}
                 </td>
-                <td className="px-5 py-4 font-semibold text-[#172b4d]">
+                <td className="px-5 py-4 font-semibold text-[#030303]">
                   {project.active_assignments_count}
                 </td>
                 <td className="px-5 py-4">
@@ -359,7 +372,7 @@ function ProjectFormDialog({
           {/* Row 2: Project Manager (Full Width) */}
           <label
             htmlFor="project-manager-select"
-            className="block text-sm font-semibold text-[#172b4d] sm:col-span-2"
+            className="block text-sm font-semibold text-[#030303] sm:col-span-2"
           >
             Project Manager
             <select
@@ -370,7 +383,7 @@ function ProjectFormDialog({
                 change("project_manager_id", Number(event.target.value))
               }
               aria-invalid={Boolean(firstFieldError(errors, "project_manager_id"))}
-              className="mt-1.5 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+              className="mt-1.5 h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-sm font-normal text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
             >
               <option value="" disabled>
                 Pilih Project Manager
@@ -422,7 +435,7 @@ function ProjectFormDialog({
           {/* Row 4: Status (Dropdown) */}
           <label
             htmlFor="project-status-select"
-            className="block text-sm font-semibold text-[#172b4d] sm:col-span-2"
+            className="block text-sm font-semibold text-[#030303] sm:col-span-2"
           >
             Status
             <select
@@ -430,7 +443,7 @@ function ProjectFormDialog({
               value={form.status}
               onChange={(event) => change("status", event.target.value)}
               aria-invalid={Boolean(firstFieldError(errors, "status"))}
-              className="mt-1.5 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+              className="mt-1.5 h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-sm font-normal text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
             >
               <option value="" disabled>
                 Pilih Status Proyek
@@ -454,19 +467,19 @@ function ProjectFormDialog({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-2.5 border-t border-[#e1e7ee] pt-4">
+        <div className="flex justify-end gap-2.5 border-t border-[#d0e6ed] pt-4">
           <button
             type="button"
             disabled={saving}
             onClick={onClose}
-            className="rounded-xl border border-[#dce4ec] bg-white px-4 py-2.5 text-sm font-semibold text-[#60738f] hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-xl border border-[#d0e6ed] bg-white px-4 py-2.5 text-sm font-semibold text-[#5a737e] hover:bg-[#EAF7FB] disabled:opacity-50"
           >
             Batal
           </button>
           <button
             type="submit"
             disabled={saving || (mode === "create" && managers.length === 0)}
-            className="rounded-xl bg-[#43a956] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#18a84f] focus:outline-none focus:ring-2 focus:ring-[#43a956]/30 disabled:opacity-50"
+            className="rounded-xl bg-[#016273] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#014d5a] focus:outline-none focus:ring-2 focus:ring-[#016273]/30 disabled:opacity-50"
           >
             {saving
               ? "Menyimpan..."
@@ -579,16 +592,78 @@ function ProjectMembersDialog({ project, onClose, onMutation }: { project: Proje
   return (
     <AdminDialog title={`Anggota — ${project.name}`} onClose={onClose}>
       <div className="space-y-5 p-5 sm:p-6">
-        <form onSubmit={addMember} className="grid gap-3 rounded-xl bg-[#f5f7fa] p-4 sm:grid-cols-2">
-          <label className="text-sm font-semibold text-[#172b4d] sm:col-span-2">Karyawan<select required value={userId || ""} onChange={(event) => setUserId(Number(event.target.value))} className="mt-2 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 font-normal"><option value="" disabled>Pilih Karyawan aktif</option>{availableCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}{candidate.division ? ` — ${candidate.division.name}` : ""}</option>)}</select>{firstFieldError(errors, "user_id") && <span className="mt-1 block text-xs font-normal text-red-600">{firstFieldError(errors, "user_id")}</span>}</label>
+        <form onSubmit={addMember} className="grid gap-3 rounded-xl border border-[#d0e6ed] bg-[#EAF7FB]/40 p-4 sm:grid-cols-2">
+          <label className="text-sm font-semibold text-[#030303] sm:col-span-2">
+            Karyawan
+            <select
+              required
+              value={userId || ""}
+              onChange={(event) => setUserId(Number(event.target.value))}
+              className="mt-2 h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 font-normal text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
+            >
+              <option value="" disabled>Pilih Karyawan aktif</option>
+              {availableCandidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}{candidate.division ? ` — ${candidate.division.name}` : ""}
+                </option>
+              ))}
+            </select>
+            {firstFieldError(errors, "user_id") && (
+              <span className="mt-1 block text-xs font-normal text-red-600">{firstFieldError(errors, "user_id")}</span>
+            )}
+          </label>
           <Field id="assignment-role" label="Peran di Proyek" value={projectRole} error={firstFieldError(errors, "project_role")} onChange={setProjectRole} />
           <Field id="assignment-start" label="Tanggal Mulai" type="date" value={startDate} error={firstFieldError(errors, "start_date")} onChange={setStartDate} />
-          <div className="sm:col-span-2"><button type="submit" disabled={saving || availableCandidates.length === 0} className="rounded-xl bg-[#43a956] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Memproses..." : "Tambah Anggota"}</button></div>
-          {availableCandidates.length === 0 && <p className="text-xs text-[#71829a] sm:col-span-2">Tidak ada Karyawan aktif lain yang dapat ditambahkan.</p>}
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={saving || availableCandidates.length === 0}
+              className="rounded-xl bg-[#016273] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#014d5a] disabled:opacity-50"
+            >
+              {saving ? "Memproses..." : "Tambah Anggota"}
+            </button>
+          </div>
+          {availableCandidates.length === 0 && (
+            <p className="text-xs text-[#5a737e] sm:col-span-2">Tidak ada Karyawan aktif lain yang dapat ditambahkan.</p>
+          )}
         </form>
-        {message && <p role="status" className="text-sm text-[#60738f]">{message}</p>}
-        {loading ? <p className="py-8 text-center text-sm text-[#71829a]">Memuat anggota...</p> : assignments.length === 0 ? <p className="py-8 text-center text-sm text-[#71829a]">Belum ada anggota pada project ini.</p> : <div className="divide-y divide-[#e1e7ee]">{assignments.map((assignment) => <div key={assignment.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#172b4d]">{assignment.user.name}</p><p className="mt-1 text-xs text-[#71829a]">{assignment.project_role} · {assignment.user.division?.name ?? "Tanpa divisi"} · mulai {formatDate(assignment.start_date)}</p></div><div className="flex items-center gap-2"><AssignmentBadge status={assignment.status} /><button type="button" disabled={saving || (!assignment.user.is_active && assignment.status !== "aktif")} onClick={() => void toggleAssignment(assignment)} className={`rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40 ${assignment.status === "aktif" ? "border-red-200 text-red-600" : "border-green-200 text-green-700"}`}>{assignment.status === "aktif" ? "Nonaktifkan" : "Aktifkan"}</button></div></div>)}</div>}
-        <p className="text-xs leading-5 text-[#71829a]">Assignment dinonaktifkan, bukan dihapus, agar histori project tetap dapat diaudit. Backend tetap memvalidasi role dan status akun saat penambahan.</p>
+        {message && <p role="status" className="text-sm text-[#5a737e]">{message}</p>}
+        {loading ? (
+          <p className="py-8 text-center text-sm text-[#5a737e]">Memuat anggota...</p>
+        ) : assignments.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[#5a737e]">Belum ada anggota pada project ini.</p>
+        ) : (
+          <div className="divide-y divide-[#d0e6ed]">
+            {assignments.map((assignment) => (
+              <div key={assignment.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-[#030303]">{assignment.user.name}</p>
+                  <p className="mt-1 text-xs text-[#5a737e]">
+                    {assignment.project_role} · {assignment.user.division?.name ?? "Tanpa divisi"} · mulai {formatDate(assignment.start_date)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AssignmentBadge status={assignment.status} />
+                  <button
+                    type="button"
+                    disabled={saving || (!assignment.user.is_active && assignment.status !== "aktif")}
+                    onClick={() => void toggleAssignment(assignment)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-40 ${
+                      assignment.status === "aktif"
+                        ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                        : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {assignment.status === "aktif" ? "Nonaktifkan" : "Aktifkan"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs leading-5 text-[#5a737e]">
+          Assignment dinonaktifkan, bukan dihapus, agar histori project tetap dapat diaudit. Backend tetap memvalidasi role dan status akun saat penambahan.
+        </p>
       </div>
     </AdminDialog>
   );
@@ -614,7 +689,7 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label htmlFor={id} className="block text-sm font-semibold text-[#172b4d]">
+    <label htmlFor={id} className="block text-sm font-semibold text-[#030303]">
       {label}
       <input
         id={id}
@@ -624,7 +699,7 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
-        className="mt-1.5 h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+        className="mt-1.5 h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-sm font-normal text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
       />
       {error && (
         <span className="mt-1 block text-xs font-normal text-red-600">{error}</span>
@@ -635,8 +710,8 @@ function Field({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-[#71829a]">{label}</dt>
-      <dd className="mt-1 font-medium text-[#172b4d]">{value}</dd>
+      <dt className="text-xs text-[#5a737e]">{label}</dt>
+      <dd className="mt-1 font-medium text-[#030303]">{value}</dd>
     </div>
   );
 }
@@ -655,15 +730,23 @@ function ActionButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="rounded-lg border border-[#dce4ec] p-2 text-[#60738f] hover:border-[#43a956] hover:text-[#2f9e44]"
+      className="rounded-lg border border-[#d0e6ed] p-2 text-[#5a737e] transition-colors hover:bg-[#EAF7FB] hover:text-[#016273]"
     >
       <AdminIcon name={icon} className="h-4 w-4" />
     </button>
   );
 }
 function StatusBadge({ status }: { status: string }) {
+  const tones: Record<string, string> = {
+    selesai: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+    berlangsung: "bg-[#EAF7FB] text-[#016273] ring-1 ring-inset ring-[#016273]/20",
+    perencanaan: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20",
+    ditunda: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+    dibatalkan: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20",
+  };
+  const tone = tones[status.toLowerCase()] || "bg-slate-100 text-slate-700";
   return (
-    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
       {formatStatus(status)}
     </span>
   );
@@ -673,8 +756,8 @@ function AssignmentBadge({ status }: { status: ProjectAssignment["status"] }) {
     <span
       className={`rounded-full px-3 py-1 text-xs font-semibold ${
         status === "aktif"
-          ? "bg-green-100 text-green-700"
-          : "bg-slate-200 text-slate-600"
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+          : "bg-slate-100 text-slate-600"
       }`}
     >
       {status === "aktif" ? "Aktif" : "Nonaktif"}
@@ -684,7 +767,7 @@ function AssignmentBadge({ status }: { status: ProjectAssignment["status"] }) {
 function TableMessage({ message }: { message: string }) {
   return (
     <tr>
-      <td colSpan={7} className="px-6 py-16 text-center text-[#71829a]">
+      <td colSpan={7} className="px-6 py-16 text-center text-[#5a737e]">
         {message}
       </td>
     </tr>
@@ -697,7 +780,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-4 rounded-xl bg-[#43a956] px-4 py-2 text-sm font-semibold text-white"
+        className="mt-4 rounded-xl bg-[#016273] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#014d5a]"
       >
         Coba Lagi
       </button>

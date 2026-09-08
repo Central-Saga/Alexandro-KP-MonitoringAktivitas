@@ -16,9 +16,9 @@ export default function EmployeePerformanceTable({
   employees: EmployeeActivitySummary[];
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#dce4ec] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
-      <header className="border-b border-[#e1e7ee] px-6 py-5">
-        <h2 className="font-bold text-[#172b4d]">
+    <section className="overflow-hidden rounded-2xl border border-[#d0e6ed] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <header className="border-b border-[#d0e6ed] px-6 py-5">
+        <h2 className="font-bold text-[#030303]">
           Performa Karyawan — {monthLabel}
         </h2>
       </header>
@@ -27,7 +27,7 @@ export default function EmployeePerformanceTable({
         <label className="relative min-w-0 flex-1">
           <AdminIcon
             name="search"
-            className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#91a0b3]"
+            className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8399a2]"
           />
           <input
             type="search"
@@ -35,14 +35,14 @@ export default function EmployeePerformanceTable({
             placeholder="Cari karyawan..."
             aria-label="Cari karyawan"
             title="Nama karyawan belum tersedia pada response Activity"
-            className="h-12 w-full rounded-xl border border-[#dce4ec] bg-white pl-12 pr-4 text-sm outline-none placeholder:text-[#91a0b3] disabled:cursor-not-allowed"
+            className="h-12 w-full rounded-xl border border-[#d0e6ed] bg-white pl-12 pr-4 text-sm outline-none placeholder:text-[#8399a2] disabled:cursor-not-allowed"
           />
         </label>
         <button
           type="button"
           disabled
           title="Endpoint Activity belum mendukung filter"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dce4ec] bg-white px-5 text-sm font-semibold text-[#60738f] opacity-60"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#d0e6ed] bg-white px-5 text-sm font-semibold text-[#5a737e] opacity-60"
         >
           <AdminIcon name="filter" className="h-5 w-5" />
           Filter
@@ -51,7 +51,7 @@ export default function EmployeePerformanceTable({
 
       <div className="max-w-full overflow-x-auto px-4 pb-5 sm:px-6">
         <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-          <thead className="bg-[#f1f4f8] text-[#60738f]">
+          <thead className="bg-[#EAF7FB] text-[#030303]">
             <tr>
               <th className="px-4 py-3 font-semibold">Karyawan</th>
               <th className="px-4 py-3 font-semibold">Divisi</th>
@@ -65,7 +65,7 @@ export default function EmployeePerformanceTable({
           <tbody>
             {employees.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-[#71829a]">
+                <td colSpan={7} className="px-6 py-12 text-center text-[#5a737e]">
                   Belum ada aktivitas karyawan pada bulan ini.
                 </td>
               </tr>
@@ -73,21 +73,21 @@ export default function EmployeePerformanceTable({
               employees.map((employee) => (
                 <tr
                   key={employee.userId}
-                  className="border-b border-[#e1e7ee] last:border-0"
+                  className="border-b border-[#d0e6ed] last:border-0 hover:bg-[#EAF7FB]/40 transition-colors"
                 >
                   <td className="px-4 py-4">
-                    <span className="font-medium text-[#172b4d]">{employee.name}</span>
+                    <span className="font-medium text-[#030303]">{employee.name}</span>
                   </td>
-                  <td className="px-4 py-4 text-[#71829a]">{employee.division ?? "—"}</td>
-                  <td className="px-4 py-4 font-medium text-[#172b4d]">
+                  <td className="px-4 py-4 text-[#5a737e]">{employee.division ?? "—"}</td>
+                  <td className="px-4 py-4 font-medium text-[#030303]">
                     {employee.total}
                   </td>
-                  <td className="px-4 py-4 font-medium text-[#172b4d]">
+                  <td className="px-4 py-4 font-medium text-[#030303]">
                     {employee.approved}
                   </td>
-                  <td className="px-4 py-4 text-[#71829a]">—</td>
-                  <td className="px-4 py-4 text-[#71829a]">—</td>
-                  <td className="px-4 py-4 text-[#71829a]">—</td>
+                  <td className="px-4 py-4 text-[#5a737e]">—</td>
+                  <td className="px-4 py-4 text-[#5a737e]">—</td>
+                  <td className="px-4 py-4 text-[#5a737e]">—</td>
                 </tr>
               ))
             )}

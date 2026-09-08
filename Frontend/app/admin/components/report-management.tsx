@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useActivities } from "../../hooks/use-activities";
 import { useProjects } from "../../hooks/use-projects";
-import type { Activity } from "../../services/activity-service";
+import {
+  exportReportToExcel,
+  exportReportToPdf,
+} from "../../lib/report-export";
+import { getAllActivities, type Activity } from "../../services/activity-service";
 import { getUsers, type ManagedUser } from "../../services/user-service";
 import { AdminIcon } from "./admin-icons";
 import EmployeeReportTable, {
@@ -24,12 +27,10 @@ type ReportFilters = {
 
 export default function ReportManagement() {
   const initialRange = useMemo(() => getCurrentMonthRange(), []);
-  const activitiesState = useActivities({ perPage: 100 });
-  const projectsState = useProjects();
   const [employees, setEmployees] = useState<ManagedUser[]>([]);
-
-  const activities = activitiesState.data;
-  const projects = projectsState.data;
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesError, setActivitiesError] = useState<unknown | null>(null);
 
   const [draftFilters, setDraftFilters] = useState<ReportFilters>({
     userId: "",
@@ -44,6 +45,50 @@ export default function ReportManagement() {
   const [activeTab, setActiveTab] = useState<ReportTab>("employees");
   const [filterError, setFilterError] = useState("");
 
+  const [exportingType, setExportingType] = useState<
+    "print" | "excel" | "pdf" | null
+  >(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const projectsState = useProjects();
+  const projects = projectsState.data;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadActivities() {
+      setActivitiesLoading(true);
+      setActivitiesError(null);
+      try {
+        const data = await getAllActivities({
+          userId: activeFilters.userId ? Number(activeFilters.userId) : undefined,
+          projectId: activeFilters.projectId
+            ? Number(activeFilters.projectId)
+            : undefined,
+          dateFrom: activeFilters.startDate || undefined,
+          dateTo: activeFilters.endDate || undefined,
+        });
+        if (active) {
+          setActivities(data);
+        }
+      } catch (err: unknown) {
+        if (active) {
+          setActivitiesError(err);
+        }
+      } finally {
+        if (active) {
+          setActivitiesLoading(false);
+        }
+      }
+    }
+
+    void loadActivities();
+
+    return () => {
+      active = false;
+    };
+  }, [activeFilters]);
+
   useEffect(() => {
     let active = true;
     void getUsers({ role: "karyawan", status: "active", page: 1, perPage: 100 })
@@ -56,8 +101,8 @@ export default function ReportManagement() {
     };
   }, []);
 
-  const isLoading = activitiesState.isLoading || projectsState.isLoading;
-  const loadError = activitiesState.error ?? projectsState.error;
+  const isLoading = activitiesLoading || projectsState.isLoading;
+  const loadError = activitiesError ?? projectsState.error;
 
   const filteredActivities = useMemo(
     () =>
@@ -69,12 +114,10 @@ export default function ReportManagement() {
         const matchesProject =
           !activeFilters.projectId ||
           activity.project_id === Number(activeFilters.projectId);
-        return (
-          matchesUser &&
-          matchesProject &&
-          date >= activeFilters.startDate &&
-          date <= activeFilters.endDate
-        );
+        const matchesDate =
+          (!activeFilters.startDate || date >= activeFilters.startDate) &&
+          (!activeFilters.endDate || date <= activeFilters.endDate);
+        return matchesUser && matchesProject && matchesDate;
       }),
     [activities, activeFilters],
   );
@@ -125,9 +168,54 @@ export default function ReportManagement() {
     [activeFilters.projectId, filteredActivities, projects],
   );
 
+  const selectedEmployeeName = useMemo(() => {
+    if (!activeFilters.userId) return "Semua Karyawan";
+    const emp = employees.find((e) => String(e.id) === activeFilters.userId);
+    return emp
+      ? `${emp.name}${emp.division ? ` (${emp.division.name})` : ""}`
+      : `User #${activeFilters.userId}`;
+  }, [activeFilters.userId, employees]);
+
+  const selectedProjectName = useMemo(() => {
+    if (!activeFilters.projectId) return "Semua Proyek";
+    const proj = projects.find((p) => String(p.id) === activeFilters.projectId);
+    return proj ? proj.name : `Project #${activeFilters.projectId}`;
+  }, [activeFilters.projectId, projects]);
+
+  const isExportDisabled =
+    isLoading || Boolean(loadError) || exportingType !== null;
+
+  function handleStartDateChange(value: string) {
+    setDraftFilters((current) => {
+      const next = { ...current, startDate: value };
+      if (next.endDate && value > next.endDate) {
+        setFilterError("Tanggal mulai tidak boleh melebihi tanggal akhir.");
+      } else {
+        setFilterError("");
+      }
+      return next;
+    });
+  }
+
+  function handleEndDateChange(value: string) {
+    setDraftFilters((current) => {
+      const next = { ...current, endDate: value };
+      if (next.startDate && next.startDate > value) {
+        setFilterError("Tanggal mulai tidak boleh melebihi tanggal akhir.");
+      } else {
+        setFilterError("");
+      }
+      return next;
+    });
+  }
+
   function applyFilters(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (draftFilters.startDate > draftFilters.endDate) {
+    if (
+      draftFilters.startDate &&
+      draftFilters.endDate &&
+      draftFilters.startDate > draftFilters.endDate
+    ) {
       setFilterError("Tanggal mulai tidak boleh melebihi tanggal akhir.");
       return;
     }
@@ -146,47 +234,227 @@ export default function ReportManagement() {
     setActiveFilters(resetValues);
   }
 
+  function handlePrint() {
+    if (isExportDisabled) return;
+    setExportError(null);
+    try {
+      window.print();
+    } catch (err: unknown) {
+      setExportError(
+        "Gagal membuka dialog cetak: " +
+          (err instanceof Error ? err.message : "Terjadi kesalahan"),
+      );
+    }
+  }
+
+  async function handleExportExcel() {
+    if (isExportDisabled) return;
+    setExportError(null);
+    setExportingType("excel");
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      exportReportToExcel({
+        type: activeTab,
+        employeeRows,
+        projectRows,
+        startDate: activeFilters.startDate,
+        endDate: activeFilters.endDate,
+      });
+    } catch (err: unknown) {
+      setExportError(
+        "Gagal mengekspor data ke Excel: " +
+          (err instanceof Error ? err.message : "Terjadi kesalahan"),
+      );
+    } finally {
+      setExportingType(null);
+    }
+  }
+
+  async function handleExportPdf() {
+    if (isExportDisabled) return;
+    setExportError(null);
+    setExportingType("pdf");
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      exportReportToPdf({
+        type: activeTab,
+        employeeRows,
+        projectRows,
+        filters: {
+          employeeName: activeFilters.userId ? selectedEmployeeName : undefined,
+          projectName: activeFilters.projectId ? selectedProjectName : undefined,
+          startDate: activeFilters.startDate,
+          endDate: activeFilters.endDate,
+        },
+        kpi: {
+          totalActivities: filteredActivities.length,
+          awaitingValidation: awaitingCount,
+          approved: approvedCount,
+          needsRevision: revisionCount,
+        },
+      });
+    } catch (err: unknown) {
+      setExportError(
+        "Gagal mengekspor data ke PDF: " +
+          (err instanceof Error ? err.message : "Terjadi kesalahan"),
+      );
+    } finally {
+      setExportingType(null);
+    }
+  }
+
   const hasFilterChanges = Boolean(
-    activeFilters.userId ||
+    draftFilters.userId ||
+      draftFilters.projectId ||
+      draftFilters.startDate !== initialRange.startDate ||
+      draftFilters.endDate !== initialRange.endDate ||
+      activeFilters.userId ||
       activeFilters.projectId ||
       activeFilters.startDate !== initialRange.startDate ||
-      activeFilters.endDate !== initialRange.endDate,
+          activeFilters.endDate !== initialRange.endDate,
   );
 
   return (
-    <main className="space-y-4 p-4 sm:space-y-5 sm:p-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-[#172b4d] sm:text-2xl">Laporan</h2>
-          <p className="text-xs text-[#71829a] sm:text-sm">
-            Ringkasan dan laporan aktivitas karyawan.
-          </p>
+    <main className="space-y-4 p-4 sm:space-y-4 sm:p-5 lg:p-6">
+      {/* Print-only Report Header */}
+      <header className="print-report-header mb-5 hidden rounded-xl border border-[#d0e6ed] bg-white p-4 print:block">
+        <div className="flex items-center justify-between border-b border-[#d0e6ed] pb-3">
+          <div>
+            <h1 className="text-xl font-bold text-[#030303]">
+              Laporan Monitoring Aktivitas Karyawan
+            </h1>
+            <p className="text-xs text-[#5a737e]">
+              Central Saga Mandala • WorkTrack System
+            </p>
+          </div>
+          <div className="text-right text-xs text-[#5a737e]">
+            <p className="font-semibold text-[#030303]">Administrator</p>
+            <p>{formatDateTimeDisplay(new Date())}</p>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <ExportButton label="Print" icon="print" />
-          <ExportButton label="Excel" icon="download" />
-          <ExportButton label="PDF" icon="download" primary />
+
+        <div className="mt-2.5 flex flex-wrap gap-4 text-xs text-[#5a737e]">
+          <div>
+            <span className="font-semibold text-[#030303]">Periode: </span>
+            <span className="text-[#5a737e]">
+              {formatDateRange(activeFilters.startDate, activeFilters.endDate)}
+            </span>
+          </div>
+          {selectedEmployeeName && (
+            <div>
+              <span className="font-semibold text-[#030303]">Karyawan: </span>
+              <span className="text-[#5a737e]">{selectedEmployeeName}</span>
+            </div>
+          )}
+          {selectedProjectName && (
+            <div>
+              <span className="font-semibold text-[#030303]">Proyek: </span>
+              <span className="text-[#5a737e]">{selectedProjectName}</span>
+            </div>
+          )}
         </div>
       </header>
 
+      {/* Screen Page Header */}
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+        <div>
+          <h1 className="text-xl font-bold text-[#030303] sm:text-2xl">Laporan</h1>
+          <p className="text-xs text-[#5a737e] sm:text-sm">
+            Ringkasan dan laporan aktivitas karyawan.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            label="Print"
+            icon="print"
+            onClick={handlePrint}
+            disabled={isExportDisabled}
+            loading={exportingType === "print"}
+            title={
+              isLoading
+                ? "Memuat data laporan..."
+                : loadError
+                  ? "Gagal memuat data laporan"
+                  : "Cetak dokumen laporan"
+            }
+          />
+          <ExportButton
+            label="Excel"
+            icon="download"
+            onClick={handleExportExcel}
+            disabled={isExportDisabled}
+            loading={exportingType === "excel"}
+            title={
+              isLoading
+                ? "Memuat data laporan..."
+                : loadError
+                  ? "Gagal memuat data laporan"
+                  : "Unduh laporan dalam format Excel (.xlsx)"
+            }
+          />
+          <ExportButton
+            label="PDF"
+            icon="download"
+            primary
+            onClick={handleExportPdf}
+            disabled={isExportDisabled}
+            loading={exportingType === "pdf"}
+            title={
+              isLoading
+                ? "Memuat data laporan..."
+                : loadError
+                  ? "Gagal memuat data laporan"
+                  : "Unduh laporan dalam format PDF (.pdf)"
+            }
+          />
+        </div>
+      </header>
+
+      {/* Error Banners */}
       {Boolean(loadError) && (
         <p
           role="alert"
-          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800 print:hidden"
         >
           Data laporan belum dapat dimuat dari server.
         </p>
       )}
 
-      {/* Filter Form */}
+      {Boolean(exportError) && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-800 print:hidden"
+        >
+          <div className="flex items-center gap-2">
+            <AdminIcon name="shield" className="h-4 w-4 shrink-0 text-red-600" />
+            <span>{exportError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExportError(null)}
+            aria-label="Tutup pesan error"
+            className="rounded-lg p-1 text-red-600 transition-colors hover:bg-red-100/60"
+          >
+            <AdminIcon name="x" className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Filter Card */}
       <form
         onSubmit={applyFilters}
-        className="rounded-2xl border border-[#dce4ec] bg-white p-4 shadow-[0_2px_5px_rgba(15,23,42,0.05)] sm:p-5"
+        className="rounded-xl border border-[#d0e6ed] bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:p-4 print:hidden"
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block text-xs font-semibold text-[#172b4d]">
-            Karyawan
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label
+              htmlFor="filter-employee"
+              className="block text-xs font-semibold text-[#030303]"
+            >
+              Karyawan
+            </label>
             <select
+              id="filter-employee"
               value={draftFilters.userId}
               onChange={(event) =>
                 setDraftFilters((current) => ({
@@ -195,7 +463,7 @@ export default function ReportManagement() {
                 }))
               }
               aria-label="Filter karyawan"
-              className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-xs font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+              className="mt-1 h-9 w-full rounded-lg border border-[#c8dfe8] bg-white px-3 text-xs text-[#030303] outline-none transition-colors focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
             >
               <option value="">Semua Karyawan</option>
               {employees.map((employee) => (
@@ -205,11 +473,17 @@ export default function ReportManagement() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="block text-xs font-semibold text-[#172b4d]">
-            Proyek
+          <div>
+            <label
+              htmlFor="filter-project"
+              className="block text-xs font-semibold text-[#030303]"
+            >
+              Proyek
+            </label>
             <select
+              id="filter-project"
               value={draftFilters.projectId}
               onChange={(event) =>
                 setDraftFilters((current) => ({
@@ -218,7 +492,7 @@ export default function ReportManagement() {
                 }))
               }
               aria-label="Filter proyek"
-              className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-xs font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+              className="mt-1 h-9 w-full rounded-lg border border-[#c8dfe8] bg-white px-3 text-xs text-[#030303] outline-none transition-colors focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
             >
               <option value="">Semua Proyek</option>
               {projects.map((project) => (
@@ -227,105 +501,145 @@ export default function ReportManagement() {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="block text-xs font-semibold text-[#172b4d]">
-            Tanggal Mulai
+          <div>
+            <label
+              htmlFor="filter-start-date"
+              className="block text-xs font-semibold text-[#030303]"
+            >
+              Tanggal Mulai
+            </label>
             <input
+              id="filter-start-date"
               type="date"
               required
               value={draftFilters.startDate}
-              onChange={(event) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  startDate: event.target.value,
-                }))
-              }
+              onChange={(event) => handleStartDateChange(event.target.value)}
               aria-label="Tanggal mulai laporan"
-              className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-xs font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+              className={`mt-1 h-9 w-full rounded-lg border bg-white px-3 text-xs text-[#030303] outline-none transition-colors focus:ring-2 ${
+                filterError
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-[#c8dfe8] focus:border-[#016273] focus:ring-[#016273]/20"
+              }`}
             />
-          </label>
+          </div>
 
-          <label className="block text-xs font-semibold text-[#172b4d]">
-            Tanggal Akhir
+          <div>
+            <label
+              htmlFor="filter-end-date"
+              className="block text-xs font-semibold text-[#030303]"
+            >
+              Tanggal Akhir
+            </label>
             <input
+              id="filter-end-date"
               type="date"
               required
               value={draftFilters.endDate}
-              onChange={(event) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  endDate: event.target.value,
-                }))
-              }
+              onChange={(event) => handleEndDateChange(event.target.value)}
               aria-label="Tanggal akhir laporan"
-              className="mt-1.5 h-10 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-xs font-normal text-[#172b4d] outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/20"
+              className={`mt-1 h-9 w-full rounded-lg border bg-white px-3 text-xs text-[#030303] outline-none transition-colors focus:ring-2 ${
+                filterError
+                  ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-[#c8dfe8] focus:border-[#016273] focus:ring-[#016273]/20"
+              }`}
             />
-          </label>
+          </div>
         </div>
 
-        {filterError && (
-          <p role="alert" className="mt-2.5 text-xs text-red-600">
-            {filterError}
-          </p>
-        )}
+        <div className="mt-3 flex flex-col gap-2 border-t border-[#d0e6ed] pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-h-[1.25rem]">
+            {filterError ? (
+              <p
+                role="alert"
+                className="flex items-center gap-1.5 text-xs font-medium text-red-600"
+              >
+                <svg
+                  className="h-3.5 w-3.5 shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {filterError}
+              </p>
+            ) : (
+              <span className="text-[11px] text-[#5a737e]">
+                Periode data:{" "}
+                {formatDateRange(
+                  activeFilters.startDate,
+                  activeFilters.endDate,
+                )}
+              </span>
+            )}
+          </div>
 
-        <div className="mt-4 flex items-center justify-end gap-2 border-t border-[#e1e7ee] pt-3">
-          {hasFilterChanges && (
+          <div className="flex items-center justify-end gap-2">
+            {hasFilterChanges && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="inline-flex h-8.5 items-center justify-center rounded-lg border border-[#d0e6ed] bg-white px-3 text-xs font-medium text-[#5a737e] transition-colors hover:bg-[#EAF7FB] hover:text-[#030303]"
+              >
+                Reset Filter
+              </button>
+            )}
             <button
-              type="button"
-              onClick={resetFilters}
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-[#dce4ec] bg-white px-3.5 text-xs font-semibold text-[#60738f] hover:bg-slate-50"
+              type="submit"
+              disabled={isLoading || Boolean(filterError)}
+              className="inline-flex h-8.5 items-center justify-center gap-1.5 rounded-lg bg-[#016273] px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#014d5a] focus:outline-none focus:ring-2 focus:ring-[#016273]/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Reset Filter
+              <AdminIcon name="filter" className="h-3.5 w-3.5" />
+              Terapkan Filter
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={isLoading || Boolean(loadError)}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#43a956] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#18a84f] focus:outline-none focus:ring-2 focus:ring-[#43a956]/30 disabled:opacity-60"
-          >
-            <AdminIcon name="filter" className="h-4 w-4" />
-            Terapkan Filter
-          </button>
+          </div>
         </div>
       </form>
 
       {/* 4 Operational KPI Cards */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      <section
+        aria-label="Statistik Laporan"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5 xl:grid-cols-4 print:grid-cols-4 print:gap-3"
+      >
         <StatCard
           title="Total Aktivitas"
           value={isLoading ? "—" : filteredActivities.length}
-          detail="Aktivitas sesuai filter aktif"
+          detail="Total aktivitas sesuai filter"
           icon="chart"
           tone="blue"
         />
         <StatCard
           title="Menunggu Validasi"
           value={isLoading ? "—" : awaitingCount}
-          detail="Perlu ditinjau reviewer"
+          detail="Menunggu ditinjau reviewer"
           icon="activity"
           tone="yellow"
         />
         <StatCard
           title="Disetujui"
           value={isLoading ? "—" : approvedCount}
-          detail="Aktivitas tervalidasi"
+          detail="Aktivitas telah disetujui"
           icon="user-check"
           tone="green"
         />
         <StatCard
           title="Perlu Revisi"
           value={isLoading ? "—" : revisionCount}
-          detail="Menunggu perbaikan karyawan"
+          detail="Perlu perbaikan oleh karyawan"
           icon="user-minus"
           tone="red"
         />
       </section>
 
-      {/* Report Tabs */}
-      <div>
-        <div className="flex gap-1 overflow-x-auto border-b border-[#dce4ec]">
+      {/* Report Tabs & Tables */}
+      <section className="space-y-3">
+        <div className="flex gap-1 overflow-x-auto border-b border-[#d0e6ed] print:hidden">
           <TabButton
             active={activeTab === "employees"}
             onClick={() => setActiveTab("employees")}
@@ -339,14 +653,15 @@ export default function ReportManagement() {
             Laporan Proyek
           </TabButton>
         </div>
-        <div className="mt-4">
+
+        <div>
           {activeTab === "employees" ? (
-            <EmployeeReportTable rows={employeeRows} />
+            <EmployeeReportTable rows={employeeRows} isLoading={isLoading} />
           ) : (
-            <ProjectReportTable rows={projectRows} />
+            <ProjectReportTable rows={projectRows} isLoading={isLoading} />
           )}
         </div>
-      </div>
+      </section>
     </main>
   );
 }
@@ -355,24 +670,42 @@ function ExportButton({
   label,
   icon,
   primary = false,
+  onClick,
+  disabled = false,
+  loading = false,
+  title,
 }: {
   label: string;
   icon: "print" | "download";
   primary?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
-      disabled
-      title={`Export ${label} belum tersedia`}
-      className={`inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold opacity-60 ${
+      onClick={onClick}
+      disabled={disabled || loading}
+      title={title}
+      aria-label={label}
+      className={`inline-flex h-8.5 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all ${
+        disabled || loading
+          ? "cursor-not-allowed opacity-50"
+          : "hover:shadow-sm active:scale-[0.98]"
+      } ${
         primary
-          ? "border-[#43a956] bg-[#43a956] text-white"
-          : "border-[#dce4ec] bg-white text-[#60738f]"
+          ? "border-[#016273] bg-[#016273] text-white hover:bg-[#014d5a]"
+          : "border-[#016273]/30 bg-white text-[#016273] hover:bg-[#EAF7FB]"
       }`}
     >
-      <AdminIcon name={icon} className="h-3.5 w-3.5" />
-      {label}
+      {loading ? (
+        <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      ) : (
+        <AdminIcon name={icon} className="h-3.5 w-3.5" />
+      )}
+      {loading ? "Mengunduh..." : label}
     </button>
   );
 }
@@ -390,10 +723,10 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 border-b-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors ${
+      className={`relative shrink-0 px-4 py-2.5 text-xs font-semibold sm:text-sm transition-colors ${
         active
-          ? "border-[#43a956] text-[#2f9e44]"
-          : "border-transparent text-[#71829a] hover:text-[#172b4d]"
+          ? "border-b-2 border-[#016273] text-[#016273] font-bold"
+          : "border-b-2 border-transparent text-[#5a737e] hover:text-[#030303]"
       }`}
     >
       {children}
@@ -439,4 +772,31 @@ function localDateKey(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatDateRange(startDate: string, endDate: string) {
+  if (!startDate && !endDate) return "Semua Tanggal";
+  if (startDate && !endDate) return `Mulai ${formatDateDisplay(startDate)}`;
+  if (!startDate && endDate) return `Sampai ${formatDateDisplay(endDate)}`;
+  return `${formatDateDisplay(startDate)} – ${formatDateDisplay(endDate)}`;
+}
+
+function formatDateDisplay(value: string) {
+  if (!value) return "—";
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
+function formatDateTimeDisplay(date: Date) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

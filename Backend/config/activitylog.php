@@ -55,7 +55,11 @@ return [
  */
     'default_except_attributes' => [
         'password',
+        'password_confirmation',
         'remember_token',
+        'access_token',
+        'authorization',
+        'secret',
     ],
 
     /*

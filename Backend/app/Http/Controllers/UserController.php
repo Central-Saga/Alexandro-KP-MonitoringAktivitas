@@ -29,6 +29,8 @@ class UserController extends Controller
         Gate::authorize('create', User::class);
 
         $user = $this->service->create($request->validated());
+        activity('user')->causedBy($request->user())->performedOn($user)->event('created')
+            ->withProperty('subject_name', $user->name)->log("Membuat pengguna {$user->name}");
 
         return response()->json([
             'message' => 'User berhasil dibuat.',
@@ -48,6 +50,8 @@ class UserController extends Controller
         Gate::authorize('update', $user);
 
         $user = $this->service->update($user, $request->validated());
+        activity('user')->causedBy($request->user())->performedOn($user)->event('updated')
+            ->withProperty('subject_name', $user->name)->log("Mengubah data pengguna {$user->name}");
 
         return response()->json([
             'message' => 'User berhasil diperbarui.',
@@ -64,6 +68,10 @@ class UserController extends Controller
             $user,
             $request->boolean('is_active')
         );
+        activity('user')->causedBy($request->user())->performedOn($user)
+            ->event($user->is_active ? 'activated' : 'deactivated')
+            ->withProperty('subject_name', $user->name)
+            ->log(($user->is_active ? 'Mengaktifkan' : 'Menonaktifkan')." pengguna {$user->name}");
 
         return response()->json([
             'message' => $user->is_active

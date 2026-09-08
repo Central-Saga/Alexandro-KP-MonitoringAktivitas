@@ -36,7 +36,10 @@ export default function ProjectActivityReview() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState(false);
   const [projectRequestVersion, setProjectRequestVersion] = useState(0);
-  const [review, setReview] = useState<{ activity: Activity; action: ReviewAction } | null>(null);
+  const [review, setReview] = useState<{
+    activity: Activity;
+    action: ReviewAction;
+  } | null>(null);
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
@@ -51,8 +54,7 @@ export default function ProjectActivityReview() {
   useEffect(() => {
     let active = true;
 
-    // Daftar proyek berasal dari endpoint yang sudah dibatasi policy PM,
-    // sehingga filter tidak pernah menawarkan proyek milik PM lain.
+    // Daftar proyek dibatasi policy backend untuk Project Manager login
     void getProjects()
       .then((items) => {
         if (active) setProjects(items);
@@ -90,38 +92,50 @@ export default function ProjectActivityReview() {
   function finishReview(message: string) {
     setReview(null);
     setSuccess(message);
-
-    // List aktif dan count header memakai request terpisah. Keduanya harus
-    // diambil ulang agar hasil keputusan langsung konsisten di seluruh UI.
     activities.refetch();
     awaitingCount.refetch();
   }
 
-  const hasActiveFilters = Boolean(search || projectId || dateFrom || dateTo || status !== "selesai");
+  const hasActiveFilters = Boolean(
+    search || projectId || dateFrom || dateTo || status !== "selesai",
+  );
 
   return (
     <main className="space-y-6 p-4 sm:p-7" aria-busy={activities.isLoading}>
       <header>
-        <h1 className="text-2xl font-bold text-[#172b4d]">Validasi Aktivitas</h1>
-        <p className="mt-1 text-sm text-[#71829a]">
+        <h1 className="text-2xl font-bold text-[#030303]">
+          Validasi Aktivitas
+        </h1>
+        <p className="mt-1 text-sm text-[#5a737e]">
           {awaitingCount.isLoading
-            ? "Memuat jumlah aktivitas..."
+            ? "Memuat antrian validasi..."
             : awaitingCount.error
-              ? "— aktivitas menunggu validasi"
+              ? "Tinjau aktivitas karyawan pada proyek yang Anda kelola."
               : `${awaitingCount.total} aktivitas menunggu validasi`}
         </p>
       </header>
 
       {success && (
-        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+        >
           <span>{success}</span>
-          <button type="button" onClick={() => setSuccess("")} aria-label="Tutup notifikasi" className="rounded p-1 hover:bg-green-100">
+          <button
+            type="button"
+            onClick={() => setSuccess("")}
+            aria-label="Tutup notifikasi"
+            className="rounded p-1 text-emerald-700 hover:bg-emerald-100"
+          >
             <AdminIcon name="x" className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-[#dce4ec] bg-white shadow-sm" aria-label="Daftar aktivitas untuk divalidasi">
+      <section
+        className="overflow-hidden rounded-2xl border border-[#d0e6ed] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
+        aria-label="Daftar aktivitas untuk divalidasi"
+      >
         <ActivityFilters
           searchInput={searchInput}
           status={status}
@@ -131,10 +145,22 @@ export default function ProjectActivityReview() {
           dateFrom={dateFrom}
           dateTo={dateTo}
           onSearch={setSearchInput}
-          onStatus={(value) => { setStatus(value); setPage(1); }}
-          onProject={(value) => { setProjectId(value); setPage(1); }}
-          onDateFrom={(value) => { setDateFrom(value); setPage(1); }}
-          onDateTo={(value) => { setDateTo(value); setPage(1); }}
+          onStatus={(value) => {
+            setStatus(value);
+            setPage(1);
+          }}
+          onProject={(value) => {
+            setProjectId(value);
+            setPage(1);
+          }}
+          onDateFrom={(value) => {
+            setDateFrom(value);
+            setPage(1);
+          }}
+          onDateTo={(value) => {
+            setDateTo(value);
+            setPage(1);
+          }}
           onReset={resetFilters}
           onRetryProjects={() => {
             setProjectsError(false);
@@ -144,9 +170,17 @@ export default function ProjectActivityReview() {
 
         {activities.error ? (
           <div className="p-16 text-center" role="alert">
-            <p className="text-sm font-semibold text-red-700">Aktivitas gagal dimuat.</p>
-            <p className="mt-1 text-sm text-[#71829a]">Periksa koneksi atau hak akses Anda, lalu coba kembali.</p>
-            <button type="button" onClick={activities.refetch} className="mt-4 rounded-xl bg-[#43a956] px-4 py-2 text-sm font-semibold text-white hover:bg-[#368f48]">
+            <p className="text-sm font-semibold text-red-700">
+              Aktivitas gagal dimuat.
+            </p>
+            <p className="mt-1 text-xs text-[#5a737e]">
+              Periksa koneksi jaringan Anda, lalu coba kembali.
+            </p>
+            <button
+              type="button"
+              onClick={activities.refetch}
+              className="mt-4 rounded-xl bg-[#016273] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#014d5a]"
+            >
               Coba Lagi
             </button>
           </div>
@@ -159,7 +193,11 @@ export default function ProjectActivityReview() {
           />
         )}
 
-        <Pagination meta={activities.meta} loading={activities.isLoading} onPage={setPage} />
+        <Pagination
+          meta={activities.meta}
+          loading={activities.isLoading}
+          onPage={setPage}
+        />
       </section>
 
       {review && (
@@ -206,17 +244,20 @@ function ActivityFilters({
   onRetryProjects: () => void;
 }) {
   return (
-    <div className="border-b border-[#e1e7ee] p-4 sm:p-6">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1.4fr)_minmax(180px,.8fr)_minmax(180px,.8fr)_170px_170px_auto]">
+    <div className="border-b border-[#d0e6ed] p-4 sm:p-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.4fr)_minmax(170px,.8fr)_minmax(170px,.8fr)_160px_160px_auto]">
         <label className="relative md:col-span-2 xl:col-span-1">
           <span className="sr-only">Cari aktivitas atau karyawan</span>
-          <AdminIcon name="search" className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#91a0b3]" />
+          <AdminIcon
+            name="search"
+            className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8399a2]"
+          />
           <input
             type="search"
             value={searchInput}
             onChange={(event) => onSearch(event.target.value)}
             placeholder="Cari aktivitas atau karyawan..."
-            className="h-11 w-full rounded-xl border border-[#dce4ec] pl-11 pr-3 text-sm outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/15"
+            className="h-11 w-full rounded-xl border border-[#c8dfe8] pl-11 pr-3 text-sm text-[#030303] outline-none placeholder:text-[#8399a2] focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
           />
         </label>
 
@@ -225,11 +266,19 @@ function ActivityFilters({
           <select
             value={projectId ?? ""}
             disabled={projectsError}
-            onChange={(event) => onProject(event.target.value ? Number(event.target.value) : undefined)}
-            className="h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm disabled:bg-slate-100 disabled:text-[#91a0b3]"
+            onChange={(event) =>
+              onProject(
+                event.target.value ? Number(event.target.value) : undefined,
+              )
+            }
+            className="h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-sm text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20 disabled:bg-slate-50 disabled:text-[#8399a2]"
           >
             <option value="">Semua Proyek</option>
-            {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -237,8 +286,10 @@ function ActivityFilters({
           <span className="sr-only">Filter status</span>
           <select
             value={status}
-            onChange={(event) => onStatus(event.target.value as ActivityStatus | "")}
-            className="h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm"
+            onChange={(event) =>
+              onStatus(event.target.value as ActivityStatus | "")
+            }
+            className="h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-sm text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
           >
             <option value="selesai">Menunggu Validasi</option>
             <option value="approved">Disetujui</option>
@@ -249,20 +300,44 @@ function ActivityFilters({
 
         <label>
           <span className="sr-only">Tanggal mulai</span>
-          <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => onDateFrom(event.target.value)} className="h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm" />
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(event) => onDateFrom(event.target.value)}
+            className="h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-xs text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
+          />
         </label>
         <label>
           <span className="sr-only">Tanggal akhir</span>
-          <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => onDateTo(event.target.value)} className="h-11 w-full rounded-xl border border-[#dce4ec] bg-white px-3 text-sm" />
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(event) => onDateTo(event.target.value)}
+            className="h-11 w-full rounded-xl border border-[#c8dfe8] bg-white px-3 text-xs text-[#030303] outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
+          />
         </label>
-        <button type="button" onClick={onReset} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#dce4ec] px-4 text-sm font-semibold text-[#60738f] hover:bg-slate-50">
-          <AdminIcon name="filter" className="h-4 w-4" />Reset
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#d0e6ed] px-4 text-xs font-semibold text-[#5a737e] transition-colors hover:bg-[#EAF7FB]"
+        >
+          <AdminIcon name="filter" className="h-4 w-4" />
+          Reset
         </button>
       </div>
 
       {projectsError && (
-        <p className="mt-3 text-sm text-amber-700" role="alert">
-          Filter proyek tidak tersedia. <button type="button" onClick={onRetryProjects} className="font-semibold underline">Coba lagi</button>
+        <p className="mt-3 text-xs text-amber-700" role="alert">
+          Filter proyek tidak dapat dimuat.{" "}
+          <button
+            type="button"
+            onClick={onRetryProjects}
+            className="font-semibold underline"
+          >
+            Coba lagi
+          </button>
         </p>
       )}
     </div>
@@ -280,45 +355,105 @@ function ActivityCards({
   defaultQueue: boolean;
   onReview: (activity: Activity, action: ReviewAction) => void;
 }) {
-  if (loading) return <PanelMessage text="Memuat aktivitas..." />;
-  if (data.length === 0) return <PanelMessage text={defaultQueue ? "Tidak ada aktivitas yang menunggu validasi." : "Tidak ada aktivitas yang cocok."} />;
+  if (loading) return <PanelMessage text="Memuat daftar aktivitas..." />;
+  if (data.length === 0)
+    return (
+      <PanelMessage
+        text={
+          defaultQueue
+            ? "Tidak ada aktivitas yang menunggu validasi."
+            : "Tidak ada aktivitas yang cocok dengan filter."
+        }
+      />
+    );
 
   return (
-    <div className="space-y-4 bg-[#f7f9fb] p-4 sm:p-6">
+    <div className="space-y-4 bg-[#EAF7FB]/30 p-4 sm:p-6">
       {data.map((activity) => {
-        const canApprove = activity.status === "selesai" || activity.status === "rejected";
-        const canRequestRevision = activity.status === "selesai" || activity.status === "approved";
+        // Review actions HANYA diizinkan saat status 'selesai' (Menunggu Validasi)
+        const isAwaitingReview = activity.status === "selesai";
 
         return (
-          <article key={activity.id} className="rounded-2xl border border-[#dce4ec] bg-white p-5 shadow-sm sm:p-6">
+          <article
+            key={activity.id}
+            className="rounded-2xl border border-[#d0e6ed] bg-white p-5 shadow-xs transition-shadow hover:shadow-sm sm:p-6"
+          >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex min-w-0 items-start gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#43a956] text-sm font-bold text-white" aria-hidden="true">{initials(activity.user.name)}</span>
+              <div className="flex min-w-0 items-start gap-3.5">
+                <span
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#016273] text-sm font-bold text-white shadow-xs"
+                  aria-hidden="true"
+                >
+                  {initials(activity.user.name)}
+                </span>
                 <div className="min-w-0">
-                  <h2 className="truncate text-base font-bold text-[#172b4d]">{activity.user.name}</h2>
-                  <p className="mt-1 text-sm text-[#60738f]">{activity.project?.name ?? "Tanpa proyek"}<span aria-hidden="true"> · </span>{activity.user.division?.name ?? "Divisi —"}</p>
+                  <h2 className="truncate text-base font-bold text-[#030303]">
+                    {activity.user.name}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-[#5a737e]">
+                    {activity.project?.name ?? "Tanpa proyek"}
+                    <span aria-hidden="true"> · </span>
+                    {activity.user.division?.name ?? "Tanpa divisi"}
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                <time dateTime={activity.created_at} className="text-sm text-[#71829a]">{formatDateTime(activity.created_at)}</time>
+              <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
+                <time
+                  dateTime={activity.created_at}
+                  className="text-xs text-[#5a737e]"
+                >
+                  {formatDateTime(activity.created_at)}
+                </time>
                 <StatusBadge status={activity.status} />
+                {activity.status === "selesai" && activity.revision_count > 0 && (
+                  <span className="text-[10px] font-medium text-amber-700">Pernah direvisi {activity.revision_count}x</span>
+                )}
               </div>
             </div>
 
-            <div className="mt-5 rounded-xl bg-[#f7f9fb] p-4">
-              {activity.task && <p className="mb-2 text-xs font-semibold text-[#43a956]">Tugas: {activity.task.title}</p>}
-              <h3 className="font-semibold text-[#172b4d]">{activity.title}</h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#60738f]">{activity.description || "Tanpa deskripsi"}</p>
-              <p className="mt-3 text-xs text-[#71829a]">Tanggal aktivitas: {formatDate(activity.activity_date)}</p>
-              <MediaList items={activity.media} />
+            <div className="mt-4 rounded-xl border border-[#d0e6ed] bg-[#fcfdfe] p-4">
+              {activity.task && (
+                <p className="mb-1.5 text-xs font-bold text-[#016273]">
+                  Tugas: {activity.task.title}
+                </p>
+              )}
+              <h3 className="text-sm font-bold text-[#030303]">
+                {activity.title}
+              </h3>
+              <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#5a737e] sm:text-sm">
+                {activity.description || "Tanpa deskripsi."}
+              </p>
+              <p className="mt-3 text-[11px] font-medium text-[#5a737e]">
+                Tanggal aktivitas: {formatDate(activity.activity_date)}
+              </p>
+              {activity.media.length > 0 && (
+                <div className="mt-3">
+                  <MediaList items={activity.media} />
+                </div>
+              )}
             </div>
 
             <ReviewHistory activity={activity} />
 
-            {(canApprove || canRequestRevision) && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {canApprove && <button type="button" onClick={() => onReview(activity, "approve")} aria-label={`Setujui aktivitas ${activity.title}`} className="rounded-xl bg-[#43a956] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#368f48]">Setujui</button>}
-                {canRequestRevision && <button type="button" onClick={() => onReview(activity, "reject")} aria-label={`Minta revisi aktivitas ${activity.title}`} className="rounded-xl border border-[#d8e0e9] bg-white px-4 py-2.5 text-sm font-semibold text-[#60738f] hover:bg-slate-50">Minta Revisi</button>}
+            {/* Aksi Setujui dan Minta Revisi hanya ditampilkan saat status menunggu validasi */}
+            {isAwaitingReview && (
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-[#d0e6ed] pt-3.5">
+                <button
+                  type="button"
+                  onClick={() => onReview(activity, "approve")}
+                  aria-label={`Setujui aktivitas ${activity.title}`}
+                  className="rounded-xl bg-[#016273] px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#014d5a]"
+                >
+                  Setujui
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onReview(activity, "reject")}
+                  aria-label={`Minta revisi aktivitas ${activity.title}`}
+                  className="rounded-xl border border-[#d0e6ed] bg-white px-4 py-2 text-xs font-semibold text-[#5a737e] transition-colors hover:bg-[#EAF7FB] hover:text-[#016273]"
+                >
+                  Minta Revisi
+                </button>
               </div>
             )}
           </article>
@@ -329,18 +464,38 @@ function ActivityCards({
 }
 
 function ReviewHistory({ activity }: { activity: Activity }) {
-  if (activity.status === "approved") {
-    return <p className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">Disetujui oleh <strong>{activity.approved_by?.name ?? "—"}</strong> pada {formatDateTime(activity.approved_at)}.</p>;
-  }
+  if (activity.review_history.length === 0) return null;
 
-  if (activity.status === "rejected") {
-    return <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><p>Diminta revisi oleh <strong>{activity.rejected_by?.name ?? "—"}</strong> pada {formatDateTime(activity.rejected_at)}.</p><p className="mt-2"><strong>Alasan revisi:</strong> {activity.rejection_reason || "—"}</p></div>;
-  }
-
-  return null;
+  return (
+    <section className="mt-4 rounded-xl border border-[#d0e6ed] bg-[#fcfdfe] px-4 py-3">
+      <h3 className="text-xs font-bold text-[#030303]">Riwayat Review</h3>
+      <div className="mt-2 divide-y divide-[#e5eef2]">
+        {activity.review_history.map((item, index) => (
+          <div key={`${item.created_at}-${index}`} className="flex gap-3 py-2.5 text-xs">
+            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.action === "approved" ? "bg-emerald-500" : item.action === "revision_requested" ? "bg-amber-500" : "bg-[#016273]"}`} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[#030303]">{reviewActionLabel(item.action)}</p>
+              {item.note && <p className="mt-1 whitespace-pre-wrap text-[#5a737e]">“{item.note}”</p>}
+              <p className="mt-1 text-[10.5px] text-[#8399a2]">{item.actor?.name ?? "Akun tidak tersedia"} • {formatDateTime(item.created_at)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
-function ReviewDialog({ activity, action, onClose, onSuccess }: { activity: Activity; action: ReviewAction; onClose: () => void; onSuccess: (message: string) => void }) {
+function ReviewDialog({
+  activity,
+  action,
+  onClose,
+  onSuccess,
+}: {
+  activity: Activity;
+  action: ReviewAction;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}) {
   const revising = action === "reject";
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -352,7 +507,7 @@ function ReviewDialog({ activity, action, onClose, onSuccess }: { activity: Acti
     event.preventDefault();
     const normalizedReason = reason.trim();
     if (revising && !normalizedReason) {
-      setValidationError("Alasan revisi wajib diisi.");
+      setValidationError("Catatan revisi wajib diisi.");
       return;
     }
 
@@ -361,58 +516,158 @@ function ReviewDialog({ activity, action, onClose, onSuccess }: { activity: Acti
     setRequestError("");
 
     try {
-      // "Minta Revisi" memakai endpoint reject existing agar alasan,
-      // reviewer, policy, dan transition guard tetap diputuskan backend.
-      const response = revising ? await rejectActivity(activity.id, normalizedReason) : await approveActivity(activity.id);
+      const response = revising
+        ? await rejectActivity(activity.id, normalizedReason)
+        : await approveActivity(activity.id);
       onSuccess(response.message);
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Keputusan gagal disimpan.");
+      setRequestError(
+        error instanceof Error ? error.message : "Keputusan gagal disimpan.",
+      );
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <AdminDialog title={revising ? "Minta Revisi" : "Setujui Aktivitas"} onClose={onClose}>
+    <AdminDialog
+      title={revising ? "Minta Revisi Aktivitas" : "Setujui Aktivitas"}
+      onClose={onClose}
+    >
       <form onSubmit={submit} className="space-y-4 p-5 sm:p-6">
         {revising ? (
-          <p className="text-sm leading-6 text-[#60738f]">Minta revisi untuk <strong className="text-[#172b4d]">{activity.title}</strong> milik {activity.user.name}?</p>
+          <div className="space-y-4">
+            <p className="text-xs leading-relaxed text-[#5a737e]">Berikan catatan yang jelas agar karyawan mengetahui bagian yang perlu diperbaiki.</p>
+            <dl className="grid gap-2 rounded-xl border border-[#d0e6ed] bg-[#EAF7FB]/35 p-3 text-xs sm:grid-cols-2">
+              <DetailItem label="Karyawan" value={activity.user.name} />
+              <DetailItem label="Nama aktivitas" value={activity.title} />
+              <DetailItem label="Proyek" value={activity.project?.name ?? "—"} />
+              <DetailItem label="Task" value={activity.task?.title ?? "—"} />
+              <DetailItem label="Tanggal aktivitas" value={formatDate(activity.activity_date)} />
+            </dl>
+          </div>
         ) : (
-          <div className="space-y-1 text-sm leading-6 text-[#60738f]">
-            <p className="font-semibold text-[#172b4d]">Setujui aktivitas ini?</p>
-            <p>Setelah disetujui, aktivitas akan berstatus Disetujui.</p>
+          <div className="space-y-1 text-xs text-[#5a737e] sm:text-sm">
+            <p className="font-semibold text-[#030303]">
+              Setujui aktivitas ini?
+            </p>
+            <p>
+              Aktivitas akan disetujui dan ditandai sebagai terverifikasi.
+            </p>
           </div>
         )}
+
         {revising && (
-          <label className="block text-sm font-semibold text-[#172b4d]">
-            Alasan Revisi
+          <label className="block text-xs font-semibold text-[#030303]">
+            CATATAN REVISI <span className="text-amber-700">*</span>
             <textarea
               required
               maxLength={1000}
               rows={4}
               value={reason}
-              placeholder="Jelaskan bagian yang perlu diperbaiki..."
+              placeholder="Contoh: Tambahkan hasil testing fitur login dan lampirkan bukti screenshot."
               aria-invalid={Boolean(validationError)}
               aria-describedby={validationError ? reasonErrorId : undefined}
-              onChange={(event) => { setReason(event.target.value); if (validationError) setValidationError(""); }}
-              className="mt-2 w-full rounded-xl border border-[#dce4ec] p-3 font-normal outline-none focus:border-[#43a956] focus:ring-2 focus:ring-[#43a956]/15"
+              onChange={(event) => {
+                setReason(event.target.value);
+                if (validationError) setValidationError("");
+              }}
+              className="mt-1.5 w-full rounded-xl border border-[#c8dfe8] p-3 text-xs font-normal text-[#030303] outline-none placeholder:text-[#8399a2] focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
             />
+            <span className="mt-1 block text-[11px] font-normal text-[#8399a2]">Catatan ini akan ditampilkan kepada karyawan.</span>
           </label>
         )}
-        {validationError && <p id={reasonErrorId} role="alert" className="text-sm text-red-600">{validationError}</p>}
-        {requestError && <p role="alert" className="text-sm text-red-600">{requestError}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={saving} className="rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-60">Batal</button>
-          <button type="submit" disabled={saving} className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 ${revising ? "bg-amber-600" : "bg-[#43a956]"}`}>{saving ? "Memproses..." : revising ? "Kirim Permintaan Revisi" : "Setujui"}</button>
+
+        {validationError && (
+          <p id={reasonErrorId} role="alert" className="text-xs text-red-600">
+            {validationError}
+          </p>
+        )}
+        {requestError && (
+          <p role="alert" className="text-xs text-red-600">
+            {requestError}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 border-t border-[#d0e6ed] pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-xl border border-[#d0e6ed] px-4 py-2 text-xs font-semibold text-[#5a737e] hover:bg-[#EAF7FB] disabled:opacity-60"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className={`rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              revising
+                ? "bg-amber-600 hover:bg-amber-700"
+                : "bg-[#016273] hover:bg-[#014d5a]"
+            }`}
+          >
+            {saving
+              ? revising ? "Mengirim..." : "Memproses..."
+              : revising
+                ? "Kirim Permintaan Revisi"
+                : "Setujui Aktivitas"}
+          </button>
         </div>
       </form>
     </AdminDialog>
   );
 }
 
-function Pagination({ meta, loading, onPage }: { meta: PaginationMeta | null; loading: boolean; onPage: (page: number) => void }) {
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return <div><dt className="text-[10px] font-medium uppercase tracking-wide text-[#8399a2]">{label}</dt><dd className="mt-0.5 line-clamp-2 font-semibold text-[#030303]">{value}</dd></div>;
+}
+
+function reviewActionLabel(action: Activity["review_history"][number]["action"]) {
+  return action === "submitted" ? "Mengirim aktivitas untuk validasi" : action === "revision_requested" ? "Meminta revisi" : action === "resubmitted" ? "Mengirim ulang aktivitas" : "Aktivitas disetujui";
+}
+
+function Pagination({
+  meta,
+  loading,
+  onPage,
+}: {
+  meta: PaginationMeta | null;
+  loading: boolean;
+  onPage: (page: number) => void;
+}) {
   if (!meta) return null;
-  return <footer className="flex flex-col gap-3 border-t border-[#e1e7ee] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-[#71829a]">Menampilkan {meta.from ?? 0}–{meta.to ?? 0} dari {meta.total}</p><div className="flex items-center gap-2"><button type="button" disabled={loading || meta.current_page <= 1} onClick={() => onPage(meta.current_page - 1)} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40">Sebelumnya</button><span className="rounded-lg bg-[#43a956] px-3 py-2 text-sm font-semibold text-white" aria-label={`Halaman ${meta.current_page} dari ${meta.last_page}`}>{meta.current_page} / {meta.last_page}</span><button type="button" disabled={loading || meta.current_page >= meta.last_page} onClick={() => onPage(meta.current_page + 1)} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40">Berikutnya</button></div></footer>;
+  return (
+    <footer className="flex flex-col gap-3 border-t border-[#d0e6ed] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-xs text-[#5a737e]">
+        Menampilkan {meta.from ?? 0}–{meta.to ?? 0} dari {meta.total} aktivitas
+      </p>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled={loading || meta.current_page <= 1}
+          onClick={() => onPage(meta.current_page - 1)}
+          className="rounded-lg border border-[#d0e6ed] px-3 py-1.5 text-xs font-semibold text-[#5a737e] transition-colors hover:bg-[#EAF7FB] disabled:opacity-40"
+        >
+          Sebelumnya
+        </button>
+        <span
+          className="rounded-lg bg-[#016273] px-3 py-1.5 text-xs font-bold text-white"
+          aria-label={`Halaman ${meta.current_page} dari ${meta.last_page}`}
+        >
+          {meta.current_page} / {meta.last_page}
+        </span>
+        <button
+          type="button"
+          disabled={loading || meta.current_page >= meta.last_page}
+          onClick={() => onPage(meta.current_page + 1)}
+          className="rounded-lg border border-[#d0e6ed] px-3 py-1.5 text-xs font-semibold text-[#5a737e] transition-colors hover:bg-[#EAF7FB] disabled:opacity-40"
+        >
+          Berikutnya
+        </button>
+      </div>
+    </footer>
+  );
 }
 
 function useAwaitingValidationCount() {
@@ -428,41 +683,84 @@ function useAwaitingValidationCount() {
 
   useEffect(() => {
     let active = true;
-
-    // Count memakai request sendiri agar header selalu mewakili seluruh
-    // antrean PM, bukan total dari hasil search/filter halaman saat ini.
     void getActivities({ status: "selesai", page: 1, perPage: 1 })
-      .then((response) => { if (active) setTotal(response.meta.total); })
-      .catch(() => { if (active) { setTotal(null); setError(true); } })
-      .finally(() => { if (active) setIsLoading(false); });
+      .then((response) => {
+        if (active) setTotal(response.meta.total);
+      })
+      .catch(() => {
+        if (active) {
+          setTotal(null);
+          setError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [requestVersion]);
 
   return { total, isLoading, error, refetch };
 }
 
 function StatusBadge({ status }: { status: ActivityStatus }) {
-  const tone = status === "approved" ? "bg-green-100 text-green-700" : status === "rejected" ? "bg-red-100 text-red-700" : status === "selesai" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700";
-  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{statusLabels[status]}</span>;
+  const tone =
+    status === "approved"
+      ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+      : status === "rejected"
+        ? "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20"
+        : status === "selesai"
+          ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"
+          : "bg-[#EAF7FB] text-[#016273] ring-1 ring-inset ring-[#016273]/20";
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${tone}`}
+    >
+      {statusLabels[status]}
+    </span>
+  );
 }
 
 function PanelMessage({ text }: { text: string }) {
-  return <p className="flex min-h-56 items-center justify-center bg-[#f7f9fb] px-6 text-center text-sm text-[#71829a]">{text}</p>;
+  return (
+    <p className="flex min-h-56 items-center justify-center bg-[#EAF7FB]/20 px-6 text-center text-sm text-[#5a737e]">
+      {text}
+    </p>
+  );
 }
 
 function initials(name: string) {
-  return name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "—";
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "—"
+  );
 }
 
 function formatDate(value: string) {
   const [year, month, day] = value.slice(0, 10).split("-").map(Number);
-  return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(year, month - 1, day));
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
 }
 
 function formatDateTime(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

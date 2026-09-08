@@ -8,6 +8,7 @@ export type EmployeeDashboardSnapshot = {
   todayActivities: DashboardResource<number>;
   awaitingReview: DashboardResource<number>;
   approvedActivities: DashboardResource<number>;
+  needsRevision: DashboardResource<{ activities: Activity[]; total: number }>;
   projects: DashboardResource<Project[]>;
   activeTasks: DashboardResource<ProjectTask[]>;
   recentActivities: DashboardResource<Activity[]>;
@@ -22,6 +23,8 @@ export async function getEmployeeDashboardSnapshot(): Promise<EmployeeDashboardS
     // merupakan status kerja awal dan bukan antrean keputusan reviewer.
     getActivities({ status: "selesai", page: 1, perPage: 1 }),
     getActivities({ status: "approved", page: 1, perPage: 1 }),
+    // Revisi tetap actionable lintas tanggal sampai dikirim ulang.
+    getActivities({ status: "rejected", page: 1, perPage: 3 }),
     getProjects(),
     getActivities({ page: 1, perPage: 5 }),
     getProjectTasks({ status: "active", page: 1, perPage: 5 }),
@@ -32,13 +35,16 @@ export async function getEmployeeDashboardSnapshot(): Promise<EmployeeDashboardS
     todayActivities: metric(results[1]),
     awaitingReview: metric(results[2]),
     approvedActivities: metric(results[3]),
-    projects: resource(results[4]),
-    recentActivities: results[5].status === "fulfilled"
-      ? { data: results[5].value.data, error: null }
-      : { data: null, error: results[5].reason },
-    activeTasks: results[6].status === "fulfilled"
+    needsRevision: results[4].status === "fulfilled"
+      ? { data: { activities: results[4].value.data, total: results[4].value.meta.total }, error: null }
+      : { data: null, error: results[4].reason },
+    projects: resource(results[5]),
+    recentActivities: results[6].status === "fulfilled"
       ? { data: results[6].value.data, error: null }
       : { data: null, error: results[6].reason },
+    activeTasks: results[7].status === "fulfilled"
+      ? { data: results[7].value.data, error: null }
+      : { data: null, error: results[7].reason },
   };
 }
 

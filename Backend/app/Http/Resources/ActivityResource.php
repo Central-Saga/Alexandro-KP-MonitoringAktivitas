@@ -59,6 +59,16 @@ class ActivityResource extends JsonResource
                 : null),
             'rejected_at' => $this->rejected_at,
             'rejection_reason' => $this->rejection_reason,
+            'revision_count' => $this->whenLoaded('reviews', fn () => $this->reviews
+                ->where('action', 'revision_requested')->count()),
+            'review_history' => $this->whenLoaded('reviews', fn () => $this->reviews->map(fn ($review) => [
+                'action' => $review->action,
+                'note' => $review->note,
+                'actor' => $review->actor
+                    ? ['name' => $review->actor->name]
+                    : null,
+                'created_at' => $review->created_at,
+            ])->values()),
 
             'media' => $this->getMedia('activity_files')->map(function ($media) {
                 return [

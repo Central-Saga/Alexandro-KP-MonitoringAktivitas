@@ -29,6 +29,8 @@ class ProjectTaskController extends Controller
     {
         Gate::authorize('create', ProjectTask::class);
         $task = $this->service->create($request->user(), $request->validated());
+        activity('project_task')->causedBy($request->user())->performedOn($task)->event('created')
+            ->withProperty('subject_name', $task->title)->log("Membuat tugas {$task->title}");
 
         return response()->json([
             'message' => 'Task berhasil diberikan.',
@@ -49,6 +51,8 @@ class ProjectTaskController extends Controller
         $projectTask->load('project');
         Gate::authorize('update', $projectTask);
         $task = $this->service->update($request->user(), $projectTask, $request->validated());
+        activity('project_task')->causedBy($request->user())->performedOn($task)->event('updated')
+            ->withProperty('subject_name', $task->title)->log("Mengubah tugas {$task->title}");
 
         return response()->json([
             'message' => 'Task berhasil diperbarui.',
@@ -65,6 +69,9 @@ class ProjectTaskController extends Controller
             $projectTask,
             ProjectTaskStatus::from($request->validated('status')),
         );
+        $statusLabel = $task->status === ProjectTaskStatus::COMPLETED ? 'Menyelesaikan' : 'Membatalkan';
+        activity('project_task')->causedBy($request->user())->performedOn($task)->event('status_updated')
+            ->withProperty('subject_name', $task->title)->log("{$statusLabel} tugas {$task->title}");
 
         return response()->json([
             'message' => 'Status Task berhasil diperbarui.',

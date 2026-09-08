@@ -27,11 +27,11 @@ const statusLabels: Record<ActivityStatus, string> = {
 };
 
 const statusBadgeTones: Record<ActivityStatus, string> = {
-  pending: "bg-amber-100 text-amber-700",
-  ongoing: "bg-blue-100 text-blue-700",
-  selesai: "bg-amber-100 text-amber-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
+  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+  ongoing: "bg-[#EAF7FB] text-[#016273] ring-1 ring-inset ring-[#016273]/20",
+  selesai: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+  approved: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20",
 };
 
 export default function ActivityMonitoring() {
@@ -101,10 +101,10 @@ export default function ActivityMonitoring() {
   return (
     <main className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       <header className="flex flex-col gap-0.5">
-        <h2 className="text-xl font-bold text-[#172b4d] sm:text-2xl">
+        <h2 className="text-xl font-bold text-[#030303] sm:text-2xl">
           Monitoring Aktivitas
         </h2>
-        <p className="text-xs text-[#71829a] sm:text-sm">
+        <p className="text-xs text-[#5a737e] sm:text-sm">
           Pantau aktivitas dan proses validasi karyawan.
         </p>
       </header>
@@ -369,27 +369,27 @@ function ActivityReviewTable({
   onReview,
 }: ActivityReviewTableProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#dce4ec] bg-white shadow-[0_2px_5px_rgba(15,23,42,0.05)]">
-      <header className="flex flex-col gap-1 border-b border-[#e1e7ee] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="overflow-hidden rounded-2xl border border-[#d0e6ed] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <header className="flex flex-col gap-1 border-b border-[#d0e6ed] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-bold text-[#172b4d]">Aktivitas Karyawan</h2>
-          <p className="text-xs text-[#71829a]">
+          <h2 className="text-base font-bold text-[#030303]">Aktivitas Karyawan</h2>
+          <p className="text-xs text-[#5a737e]">
             Pantau dan verifikasi aktivitas harian seluruh karyawan
           </p>
         </div>
         {meta && (
-          <span className="text-xs text-[#71829a]">
+          <span className="text-xs text-[#5a737e]">
             Total {meta.total} aktivitas ditemukan
           </span>
         )}
       </header>
 
       {/* Filter Bar */}
-      <div className="grid gap-2.5 border-b border-[#e1e7ee] bg-[#fafbfc] p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-2.5 border-b border-[#d0e6ed] bg-[#EAF7FB]/40 p-4 sm:grid-cols-2 lg:grid-cols-5">
         <label className="relative sm:col-span-2 lg:col-span-2">
           <AdminIcon
             name="search"
-            className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#91a0b3]"
+            className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8399a2]"
           />
           <input
             type="search"
@@ -397,7 +397,7 @@ function ActivityReviewTable({
             onChange={(event) => onSearch(event.target.value)}
             aria-label="Cari judul atau karyawan"
             placeholder="Cari aktivitas atau karyawan..."
-            className="h-10 w-full rounded-xl border border-[#dce4ec] bg-white pl-10 pr-3 text-xs outline-none focus:border-[#43a956]"
+            className="h-10 w-full rounded-xl border border-[#c8dfe8] bg-white pl-10 pr-3 text-xs outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
           />
         </label>
 
@@ -405,7 +405,7 @@ function ActivityReviewTable({
           value={status}
           onChange={(event) => onStatus(event.target.value as ActivityStatus | "")}
           aria-label="Filter status"
-          className="h-10 rounded-xl border border-[#dce4ec] bg-white px-3 text-xs outline-none focus:border-[#43a956]"
+          className="h-10 rounded-xl border border-[#c8dfe8] bg-white px-3 text-xs outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
         >
           <option value="">Semua Status</option>
           <option value="selesai">Menunggu Validasi</option>
@@ -420,7 +420,7 @@ function ActivityReviewTable({
             onDivision(event.target.value ? Number(event.target.value) : undefined)
           }
           aria-label="Filter divisi"
-          className="h-10 rounded-xl border border-[#dce4ec] bg-white px-3 text-xs outline-none focus:border-[#43a956]"
+          className="h-10 rounded-xl border border-[#c8dfe8] bg-white px-3 text-xs outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
         >
           <option value="">Semua Divisi</option>
           {divisions.map((division) => (
@@ -437,23 +437,23 @@ function ActivityReviewTable({
             onChange={(event) => onDateFrom(event.target.value)}
             aria-label="Tanggal mulai"
             title="Tanggal mulai"
-            className="h-10 w-full rounded-xl border border-[#dce4ec] bg-white px-2.5 text-xs outline-none focus:border-[#43a956]"
+            className="h-10 w-full rounded-xl border border-[#c8dfe8] bg-white px-2.5 text-xs outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
           />
-          <span className="text-xs text-[#91a0b3]">-</span>
+          <span className="text-xs text-[#8399a2]">-</span>
           <input
             type="date"
             value={dateTo}
             onChange={(event) => onDateTo(event.target.value)}
             aria-label="Tanggal akhir"
             title="Tanggal akhir"
-            className="h-10 w-full rounded-xl border border-[#dce4ec] bg-white px-2.5 text-xs outline-none focus:border-[#43a956]"
+            className="h-10 w-full rounded-xl border border-[#c8dfe8] bg-white px-2.5 text-xs outline-none focus:border-[#016273] focus:ring-2 focus:ring-[#016273]/20"
           />
           {hasActiveFilters && (
             <button
               type="button"
               onClick={onResetFilters}
               title="Reset filter"
-              className="flex h-10 shrink-0 items-center justify-center rounded-xl border border-[#dce4ec] bg-white px-3 text-xs font-semibold text-[#60738f] hover:bg-slate-50"
+              className="flex h-10 shrink-0 items-center justify-center rounded-xl border border-[#d0e6ed] bg-white px-3 text-xs font-semibold text-[#5a737e] hover:bg-[#EAF7FB]"
             >
               Reset
             </button>
@@ -464,7 +464,7 @@ function ActivityReviewTable({
       {/* Review Table (7 Columns) */}
       <div className="max-w-full overflow-x-auto">
         <table className="w-full min-w-[900px] text-left text-xs sm:text-sm">
-          <thead className="bg-[#f1f4f8] text-[#60738f]">
+          <thead className="bg-[#EAF7FB] text-[#030303]">
             <tr>
               <th className="px-4 py-3 font-semibold">Karyawan</th>
               <th className="px-4 py-3 font-semibold">Divisi</th>
@@ -481,91 +481,82 @@ function ActivityReviewTable({
             ) : activities.length === 0 ? (
               <MessageRow message="Tidak ada aktivitas yang cocok." />
             ) : (
-              activities.map((activity) => {
-                const eligible =
-                  activity.status === "selesai" ||
-                  activity.status === "pending" ||
-                  activity.status === "approved" ||
-                  activity.status === "rejected";
-
-                return (
-                  <tr
-                    key={activity.id}
-                    className="border-b border-[#e1e7ee] last:border-0 hover:bg-slate-50/60"
-                  >
-                    <td className="px-4 py-3.5 font-semibold text-[#172b4d]">
-                      {activity.user?.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-[#71829a]">
-                      {activity.user?.division?.name ?? "—"}
-                    </td>
-                    <td className="max-w-xs px-4 py-3.5">
-                      <p className="font-medium text-[#172b4d]">{activity.title}</p>
-                      {activity.description && (
-                        <p className="mt-0.5 line-clamp-1 text-xs text-[#71829a]">
-                          {activity.description}
-                        </p>
-                      )}
-                      <MediaList items={activity.media} />
-                      {activity.status === "rejected" && activity.rejection_reason && (
-                        <p className="mt-1 rounded bg-red-50 p-1.5 text-xs text-red-700">
-                          <span className="font-semibold">Revisi:</span>{" "}
-                          {activity.rejection_reason}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-medium text-[#60738f]">
-                      {activity.project?.name ?? "Tanpa proyek"}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-[#71829a]">
-                      {formatDate(activity.activity_date)}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          statusBadgeTones[activity.status] ??
-                          "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {statusLabels[activity.status] ?? activity.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {eligible && activity.status !== "approved" && (
+              activities.map((activity) => (
+                <tr
+                  key={activity.id}
+                  className="border-b border-[#d0e6ed] last:border-0 hover:bg-[#EAF7FB]/40 transition-colors"
+                >
+                  <td className="px-4 py-3.5 font-semibold text-[#030303]">
+                    {activity.user?.name ?? "—"}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs text-[#5a737e]">
+                    {activity.user?.division?.name ?? "—"}
+                  </td>
+                  <td className="max-w-xs px-4 py-3.5">
+                    <p className="font-medium text-[#030303]">{activity.title}</p>
+                    {activity.description && (
+                      <p className="mt-0.5 line-clamp-1 text-xs text-[#5a737e]">
+                        {activity.description}
+                      </p>
+                    )}
+                    <MediaList items={activity.media} />
+                    {activity.status === "rejected" && activity.rejection_reason && (
+                      <p className="mt-1 rounded bg-rose-50 p-1.5 text-xs text-rose-700">
+                        <span className="font-semibold">Revisi:</span>{" "}
+                        {activity.rejection_reason}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-medium text-[#5a737e]">
+                    {activity.project?.name ?? "Tanpa proyek"}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs text-[#5a737e]">
+                    {formatDate(activity.activity_date)}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        statusBadgeTones[activity.status] ??
+                        "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {statusLabels[activity.status] ?? activity.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {activity.status === "selesai" ? (
+                        <>
                           <button
                             type="button"
                             onClick={() => onReview(activity, "approve")}
-                            className="rounded-lg border border-green-300 bg-green-50/60 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-100"
+                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
                           >
                             Setujui
                           </button>
-                        )}
-                        {eligible && activity.status !== "rejected" && (
                           <button
                             type="button"
                             onClick={() => onReview(activity, "reject")}
-                            className="rounded-lg border border-red-300 bg-red-50/60 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100"
+                            className="rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
                           >
-                            Tolak
+                            Minta Revisi
                           </button>
-                        )}
-                        {!eligible && (
-                          <span className="text-xs text-[#91a0b3]">—</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
+                        </>
+                      ) : (
+                        <span className="text-xs text-[#8399a2]">—</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
       {meta && (
-        <footer className="flex flex-col gap-3 border-t border-[#e1e7ee] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#71829a]">
+        <footer className="flex flex-col gap-3 border-t border-[#d0e6ed] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-[#5a737e]">
             Menampilkan {meta.from ?? 0}–{meta.to ?? 0} dari {meta.total} aktivitas
           </p>
           <div className="flex gap-2">
@@ -573,18 +564,18 @@ function ActivityReviewTable({
               type="button"
               disabled={loading || meta.current_page <= 1}
               onClick={() => onPage(meta.current_page - 1)}
-              className="rounded-lg border border-[#dce4ec] bg-white px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+              className="rounded-lg border border-[#d0e6ed] bg-white px-3 py-1.5 text-xs font-medium text-[#030303] hover:bg-[#EAF7FB] disabled:opacity-40"
             >
               Sebelumnya
             </button>
-            <span className="flex items-center px-2 text-xs font-semibold text-[#172b4d]">
+            <span className="flex items-center px-2 text-xs font-semibold text-[#030303]">
               {meta.current_page} / {meta.last_page}
             </span>
             <button
               type="button"
               disabled={loading || meta.current_page >= meta.last_page}
               onClick={() => onPage(meta.current_page + 1)}
-              className="rounded-lg border border-[#dce4ec] bg-white px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+              className="rounded-lg border border-[#d0e6ed] bg-white px-3 py-1.5 text-xs font-medium text-[#030303] hover:bg-[#EAF7FB] disabled:opacity-40"
             >
               Berikutnya
             </button>
@@ -598,7 +589,7 @@ function ActivityReviewTable({
 function MessageRow({ message }: { message: string }) {
   return (
     <tr>
-      <td colSpan={7} className="px-6 py-12 text-center text-[#71829a]">
+      <td colSpan={7} className="px-6 py-12 text-center text-[#5a737e]">
         {message}
       </td>
     </tr>
@@ -637,7 +628,7 @@ function ReviewDialog({
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (rejecting && !reason.trim()) {
-      setMessage("Alasan penolakan wajib diisi.");
+      setMessage("Alasan revisi wajib diisi.");
       return;
     }
     setSaving(true);
@@ -658,21 +649,21 @@ function ReviewDialog({
 
   return (
     <AdminDialog
-      title={rejecting ? "Tolak Aktivitas" : "Setujui Aktivitas"}
+      title={rejecting ? "Minta Revisi Aktivitas" : "Setujui Aktivitas"}
       onClose={onClose}
     >
       <form onSubmit={submit} className="space-y-4 p-5 sm:p-6">
-        <p className="text-sm text-[#60738f]">
-          {rejecting ? "Tolak" : "Setujui"} aktivitas{" "}
-          <strong className="text-[#172b4d]">{activity.title}</strong> milik{" "}
+        <p className="text-sm text-[#5a737e]">
+          {rejecting ? "Minta revisi untuk" : "Setujui"} aktivitas{" "}
+          <strong className="text-[#030303]">{activity.title}</strong> milik{" "}
           {activity.user.name}?
         </p>
         {rejecting && (
           <label
             htmlFor="rejection-reason"
-            className="block text-sm font-semibold text-[#172b4d]"
+            className="block text-sm font-semibold text-[#030303]"
           >
-            Alasan Penolakan
+            Alasan / Catatan Revisi
             <textarea
               id="rejection-reason"
               required
@@ -681,8 +672,8 @@ function ReviewDialog({
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               aria-invalid={Boolean(message && !reason.trim())}
-              placeholder="Jelaskan alasan penolakan dan instruksi revisi..."
-              className="mt-2 w-full rounded-xl border border-[#dce4ec] p-3 text-sm font-normal outline-none focus:border-red-500"
+              placeholder="Jelaskan bagian yang perlu diperbaiki oleh karyawan..."
+              className="mt-2 w-full rounded-xl border border-[#c8dfe8] p-3 text-sm font-normal outline-none focus:border-red-500"
             />
           </label>
         )}
@@ -695,7 +686,7 @@ function ReviewDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-[#dce4ec] px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+            className="rounded-xl border border-[#d0e6ed] px-4 py-2 text-sm font-semibold text-[#5a737e] hover:bg-[#EAF7FB]"
           >
             Batal
           </button>
@@ -703,10 +694,10 @@ function ReviewDialog({
             type="submit"
             disabled={saving}
             className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 ${
-              rejecting ? "bg-red-600 hover:bg-red-700" : "bg-[#18a84f] hover:bg-green-700"
+              rejecting ? "bg-red-600 hover:bg-red-700" : "bg-[#016273] hover:bg-[#014d5a]"
             }`}
           >
-            {saving ? "Memproses..." : rejecting ? "Tolak" : "Setujui"}
+            {saving ? "Memproses..." : rejecting ? "Minta Revisi" : "Setujui"}
           </button>
         </div>
       </form>

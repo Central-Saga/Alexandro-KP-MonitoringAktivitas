@@ -10,6 +10,8 @@ use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectAssignment;
+use App\Notifications\ActivityResubmittedNotification;
+use App\Notifications\ActivityRevisionRequestedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -30,6 +32,22 @@ class ActivityController extends Controller
         return ActivityResource::collection(
             $this->service->paginate($request->user(), $request->validated())
         );
+    }
+
+    public function todaySummary(Request $request)
+    {
+        Gate::authorize('viewAny', Activity::class);
+
+        $validated = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        return response()->json([
+            'data' => $this->service->todaySummary(
+                $request->user(),
+                $validated['date'] ?? now()->toDateString(),
+            ),
+        ]);
     }
 
     /**
@@ -152,6 +170,13 @@ class ActivityController extends Controller
          * untuk user/project sesuai kebutuhan administrasi.
          */
         $activity = $this->service->create($data);
+        $activity->reviews()->create([
+            'actor_id' => $request->user()->id,
+            'action' => 'submitted',
+        ]);
+        $activity->load('reviews.actor');
+        activity('activity')->causedBy($request->user())->performedOn($activity)->event('created')
+            ->withProperty('subject_name', $activity->title)->log("Membuat aktivitas {$activity->title}");
 
         // Kirim event setelah activity berhasil dibuat.
         ActivityCreated::dispatch($activity);
@@ -290,10 +315,22 @@ class ActivityController extends Controller
          * Admin tetap diperbolehkan mengubah user/project
          * sesuai kebutuhan administrasi.
          */
-        $activity = $this->service->update($activity, $data);
+        $wasRejected = $activity->status === ActivityStatus::REJECTED;
+        $activity = $this->service->update($activity, $data, $request->user());
+        $action = $wasRejected ? 'Mengirim ulang' : 'Memperbaiki';
+        activity('activity')->causedBy($request->user())->performedOn($activity)->event($wasRejected ? 'resubmitted' : 'updated')
+            ->withProperty('subject_name', $activity->title)->log("{$action} aktivitas {$activity->title}");
+
+        if ($wasRejected) {
+            $activity->project?->projectManager?->notify(
+                new ActivityResubmittedNotification($activity, $request->user())
+            );
+        }
 
         return response()->json([
-            'message' => 'Aktivitas berhasil diperbarui',
+            'message' => $wasRejected
+                ? 'Aktivitas berhasil dikirim ulang untuk divalidasi.'
+                : 'Aktivitas berhasil diperbarui',
             'data' => new ActivityResource($activity),
         ]);
     }
@@ -372,6 +409,9 @@ class ActivityController extends Controller
         Gate::authorize('approve', $activity);
 
         $activity = $this->service->approve($activity, $request->user());
+        $ownerName = $activity->user()->value('name');
+        activity('activity')->causedBy($request->user())->performedOn($activity)->event('approved')
+            ->withProperty('subject_name', $activity->title)->log("Menyetujui aktivitas {$activity->title} milik {$ownerName}");
 
         return response()->json([
             'message' => 'Aktivitas berhasil disetujui',
@@ -391,9 +431,15 @@ class ActivityController extends Controller
             $request->user(),
             $data['rejection_reason']
         );
+        $ownerName = $activity->user()->value('name');
+        activity('activity')->causedBy($request->user())->performedOn($activity)->event('revision_requested')
+            ->withProperty('subject_name', $activity->title)->log("Meminta revisi aktivitas {$activity->title} milik {$ownerName}");
+        $activity->user->notify(
+            new ActivityRevisionRequestedNotification($activity, $request->user())
+        );
 
         return response()->json([
-            'message' => 'Aktivitas berhasil ditolak',
+            'message' => 'Permintaan revisi berhasil dikirim.',
             'data' => new ActivityResource($activity),
         ]);
     }

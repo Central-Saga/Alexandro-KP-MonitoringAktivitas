@@ -50,10 +50,10 @@ class ActivityPolicy
         }
 
         if ($user->hasRole('karyawan')) {
-            // Hasil yang sudah approved bersifat final untuk Karyawan. Activity
-            // rejected tetap dapat direvisi dan dikirim ulang secara operasional.
+            // Karyawan hanya dapat mengubah aktivitas setelah PM secara
+            // eksplisit meminta revisi. Menunggu validasi dan approved read-only.
             return $activity->user_id === $user->id
-                && $activity->status !== ActivityStatus::APPROVED;
+                && $activity->status === ActivityStatus::REJECTED;
         }
 
         if ($user->hasRole('project_manager')) {

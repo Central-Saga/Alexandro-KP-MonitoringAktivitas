@@ -37,6 +37,8 @@ class DivisionController extends Controller
         Gate::authorize('create', Division::class);
 
         $division = $this->service->create($request->validated());
+        activity('division')->causedBy($request->user())->performedOn($division)->event('created')
+            ->withProperty('subject_name', $division->name)->log("Membuat divisi {$division->name}");
 
         return response()->json([
             'message' => 'Divisi berhasil dibuat.',
@@ -56,6 +58,8 @@ class DivisionController extends Controller
         Gate::authorize('update', $division);
 
         $division = $this->service->update($division, $request->validated());
+        activity('division')->causedBy($request->user())->performedOn($division)->event('updated')
+            ->withProperty('subject_name', $division->name)->log("Mengubah divisi {$division->name}");
 
         return response()->json([
             'message' => 'Divisi berhasil diperbarui.',
@@ -68,6 +72,8 @@ class DivisionController extends Controller
         Gate::authorize('updateStatus', $division);
 
         $division = $this->service->updateStatus($division, $request->validated('status'));
+        activity('division')->causedBy($request->user())->performedOn($division)->event('status_updated')
+            ->withProperty('subject_name', $division->name)->log("Mengubah status divisi {$division->name}");
 
         return response()->json([
             'message' => $division->status === 'active'

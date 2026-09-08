@@ -47,7 +47,7 @@ class ActivityApprovalTest extends TestCase
         $this->postJson("/api/activities/{$activity->id}/reject", ['rejection_reason' => 'Tidak sesuai'])
             ->assertForbidden();
         $this->putJson("/api/activities/{$activity->id}", ['status' => 'approved'])
-            ->assertUnprocessable()->assertJsonValidationErrors('status');
+            ->assertForbidden();
         $this->postJson('/api/activities', [
             'project_id' => $project->id,
             'user_id' => $employee->id,
@@ -71,16 +71,7 @@ class ActivityApprovalTest extends TestCase
         $this->assertNotNull($activity->fresh()->approved_at);
 
         $this->postJson("/api/activities/{$activity->id}/reject", ['rejection_reason' => 'Bukti kurang jelas'])
-            ->assertOk()->assertJsonPath('data.status', 'rejected')
-            ->assertJsonPath('data.rejected_by.id', $admin->id)
-            ->assertJsonPath('data.rejection_reason', 'Bukti kurang jelas');
-        $activity->refresh();
-        $this->assertNull($activity->approved_by);
-        $this->assertNull($activity->approved_at);
-        $this->assertNotNull($activity->rejected_at);
-
-        $this->postJson("/api/activities/{$activity->id}/approve")
-            ->assertOk()->assertJsonPath('data.rejection_reason', null);
+            ->assertUnprocessable()->assertJsonValidationErrors('status');
     }
 
     public function test_transition_and_rejection_reason_are_validated(): void

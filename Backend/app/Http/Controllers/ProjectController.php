@@ -85,6 +85,8 @@ class ProjectController extends Controller
         $data = $request->validated();
         $data['status'] ??= 'berlangsung';
         $project = Project::query()->create($data);
+        activity('project')->causedBy($request->user())->performedOn($project)->event('created')
+            ->withProperty('subject_name', $project->name)->log("Membuat proyek {$project->name}");
         $this->cache->invalidate(QueryCache::PROJECTS);
 
         return response()->json([
@@ -106,6 +108,8 @@ class ProjectController extends Controller
         }
 
         $project->update($data);
+        activity('project')->causedBy($request->user())->performedOn($project)->event('updated')
+            ->withProperty('subject_name', $project->name)->log("Mengubah proyek {$project->name}");
 
         // Pergantian PM langsung mengubah scope list dan Activity, sehingga
         // kedua cache harus dibuang dalam mutation yang sama.

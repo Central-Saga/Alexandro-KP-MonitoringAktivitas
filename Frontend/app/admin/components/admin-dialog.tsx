@@ -32,8 +32,8 @@ export default function AdminDialog({
       <div
         className={`flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
       >
-        <header className="flex shrink-0 items-center justify-between border-b border-[#e1e7ee] px-5 py-4 sm:px-6">
-          <h3 id="admin-dialog-title" className="text-base font-bold text-[#172b4d]">
+        <header className="flex shrink-0 items-center justify-between border-b border-[#d0e6ed] px-5 py-4 sm:px-6">
+          <h3 id="admin-dialog-title" className="text-base font-bold text-[#030303]">
             {title}
           </h3>
           <button
@@ -41,7 +41,7 @@ export default function AdminDialog({
             autoFocus
             onClick={onClose}
             aria-label="Tutup dialog"
-            className="rounded-lg p-1.5 text-[#71829a] hover:bg-slate-100 hover:text-[#172b4d] focus:outline-none focus:ring-2 focus:ring-[#18a84f]/30"
+            className="rounded-lg p-1.5 text-[#5a737e] hover:bg-[#EAF7FB] hover:text-[#016273] focus:outline-none focus:ring-2 focus:ring-[#016273]/30"
           >
             <AdminIcon name="x" className="h-5 w-5" />
           </button>

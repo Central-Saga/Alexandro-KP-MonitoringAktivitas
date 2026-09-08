@@ -7,10 +7,14 @@ use App\Models\Activity;
 use App\Models\Project;
 use App\Models\ProjectAssignment;
 use App\Models\User;
+use App\Notifications\ActivityResubmittedNotification;
+use App\Notifications\ActivityRevisionRequestedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Activitylog\Models\Activity as ActivityLog;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -115,7 +119,7 @@ class EmployeeActivityWorkflowTest extends TestCase
 
         foreach (['approved', 'rejected'] as $status) {
             $this->putJson("/api/activities/{$own->id}", ['status' => $status])
-                ->assertUnprocessable()->assertJsonValidationErrors('status');
+                ->assertForbidden();
             $this->postJson('/api/activities', $this->activityPayload($project, [
                 'user_id' => $employee->id,
                 'status' => $status,
@@ -128,6 +132,99 @@ class EmployeeActivityWorkflowTest extends TestCase
         $this->postJson("/api/activities/{$own->id}/approve")->assertForbidden();
         $this->postJson("/api/activities/{$own->id}/reject", ['rejection_reason' => 'Self review'])
             ->assertForbidden();
+    }
+
+    public function test_employee_today_summary_counts_only_own_activities_for_requested_date(): void
+    {
+        $employee = $this->makeUser('karyawan');
+        $otherEmployee = $this->makeUser('karyawan');
+        $manager = $this->makeUser('project_manager');
+        $project = $this->makeProject($manager, 'Summary');
+
+        foreach ([
+            ActivityStatus::SELESAI,
+            ActivityStatus::SELESAI,
+            ActivityStatus::APPROVED,
+            ActivityStatus::REJECTED,
+        ] as $status) {
+            $this->makeActivity($employee, $project, $status)
+                ->update(['activity_date' => '2026-08-31']);
+        }
+
+        $this->makeActivity($employee, $project, ActivityStatus::APPROVED);
+        $this->makeActivity($otherEmployee, $project, ActivityStatus::REJECTED)
+            ->update(['activity_date' => '2026-08-31']);
+
+        Sanctum::actingAs($employee);
+
+        $this->getJson('/api/activities/summary/today?date=2026-08-31')
+            ->assertOk()
+            ->assertExactJson([
+                'data' => [
+                    'total' => 4,
+                    'waiting_validation' => 2,
+                    'approved' => 1,
+                    'needs_revision' => 1,
+                ],
+            ]);
+
+        $this->getJson('/api/activities/summary/today?date=2026-09-01')
+            ->assertOk()
+            ->assertExactJson([
+                'data' => [
+                    'total' => 0,
+                    'waiting_validation' => 0,
+                    'approved' => 0,
+                    'needs_revision' => 0,
+                ],
+            ]);
+    }
+
+    public function test_employee_actionable_revisions_are_scoped_unbounded_by_date_and_disappear_after_resubmit(): void
+    {
+        $employee = $this->makeUser('karyawan');
+        $otherEmployee = $this->makeUser('karyawan');
+        $manager = $this->makeUser('project_manager');
+        $project = $this->makeProject($manager, 'Actionable Dashboard');
+        $this->assign($project, $employee, 'aktif');
+
+        $rejected = $this->makeActivity($employee, $project, ActivityStatus::REJECTED);
+        $rejected->update([
+            'activity_date' => '2026-08-20',
+            'rejection_reason' => 'Tambahkan screenshot hasil testing.',
+            'rejected_by' => $manager->id,
+            'rejected_at' => '2026-08-31 07:42:00',
+        ]);
+        $rejected->reviews()->create([
+            'actor_id' => $manager->id,
+            'action' => 'revision_requested',
+            'note' => 'Tambahkan screenshot hasil testing.',
+        ]);
+
+        $this->makeActivity($otherEmployee, $project, ActivityStatus::REJECTED);
+        $this->makeActivity($employee, $project, ActivityStatus::SELESAI);
+        $this->makeActivity($employee, $project, ActivityStatus::APPROVED);
+
+        Sanctum::actingAs($employee);
+
+        $this->getJson('/api/activities?status=rejected&page=1&per_page=3')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $rejected->id)
+            ->assertJsonPath('data.0.activity_date', '2026-08-20T00:00:00.000000Z')
+            ->assertJsonPath('data.0.review_history.0.action', 'revision_requested')
+            ->assertJsonPath('data.0.review_history.0.note', 'Tambahkan screenshot hasil testing.')
+            ->assertJsonPath('data.0.review_history.0.actor.name', $manager->name);
+
+        $this->putJson("/api/activities/{$rejected->id}", [
+            'title' => 'Aktivitas sudah diperbaiki',
+        ])->assertOk()->assertJsonPath('data.status', 'selesai');
+
+        $this->getJson('/api/activities?status=rejected&page=1&per_page=3')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0)
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_rejected_activity_can_be_revised_but_approved_activity_is_final_for_employee(): void
@@ -211,6 +308,56 @@ class EmployeeActivityWorkflowTest extends TestCase
         $this->putJson("/api/activities/{$activityId}", [
             'title' => 'Mencoba ubah aktivitas yang sudah disetujui',
         ])->assertForbidden();
+    }
+
+    public function test_multiple_revision_cycles_preserve_history_notifications_and_account_audit(): void
+    {
+        Notification::fake();
+        $employee = $this->makeUser('karyawan');
+        $manager = $this->makeUser('project_manager');
+        $project = $this->makeProject($manager, 'Multi Revision');
+        $this->assign($project, $employee, 'aktif');
+
+        Sanctum::actingAs($employee);
+        $activityId = $this->postJson('/api/activities', $this->activityPayload($project, [
+            'user_id' => $employee->id,
+            'title' => 'Implementasi Login',
+        ]))->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($manager);
+        $this->postJson("/api/activities/{$activityId}/reject", [
+            'rejection_reason' => 'Tambahkan screenshot hasil testing.',
+        ])->assertOk()->assertJsonPath('data.review_history.1.action', 'revision_requested');
+
+        Sanctum::actingAs($employee);
+        $this->putJson("/api/activities/{$activityId}", ['description' => 'Testing dan screenshot ditambahkan.'])
+            ->assertOk()->assertJsonPath('data.status', 'selesai');
+
+        Sanctum::actingAs($manager);
+        $this->postJson("/api/activities/{$activityId}/reject", [
+            'rejection_reason' => 'Cantumkan juga hasil testing API.',
+        ])->assertOk()->assertJsonPath('data.revision_count', 2);
+
+        Sanctum::actingAs($employee);
+        $this->putJson("/api/activities/{$activityId}", ['description' => 'Seluruh hasil testing sudah dicantumkan.'])
+            ->assertOk()->assertJsonPath('data.status', 'selesai');
+
+        Sanctum::actingAs($manager);
+        $response = $this->postJson("/api/activities/{$activityId}/approve")
+            ->assertOk()->assertJsonPath('data.status', 'approved');
+
+        $this->assertSame(
+            ['submitted', 'revision_requested', 'resubmitted', 'revision_requested', 'resubmitted', 'approved'],
+            collect($response->json('data.review_history'))->pluck('action')->all(),
+        );
+        $this->assertDatabaseHas('activity_reviews', ['activity_id' => $activityId, 'note' => 'Tambahkan screenshot hasil testing.']);
+        $this->assertDatabaseHas('activity_reviews', ['activity_id' => $activityId, 'note' => 'Cantumkan juga hasil testing API.']);
+
+        Notification::assertSentTo($employee, ActivityRevisionRequestedNotification::class, 2);
+        Notification::assertSentTo($manager, ActivityResubmittedNotification::class, 2);
+        $this->assertSame(2, ActivityLog::query()->where('causer_id', $manager->id)->where('event', 'revision_requested')->count());
+        $this->assertSame(2, ActivityLog::query()->where('causer_id', $employee->id)->where('event', 'resubmitted')->count());
+        $this->assertSame(1, ActivityLog::query()->where('causer_id', $manager->id)->where('event', 'approved')->count());
     }
 
     public function test_employee_owner_can_upload_media_with_size_validation(): void

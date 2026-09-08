@@ -11,6 +11,8 @@ interface ActivityRepositoryInterface
 {
     public function paginate(User $user, array $filters): LengthAwarePaginator;
 
+    public function todaySummary(User $user, string $date): array;
+
     public function findById(int $id): ?Activity;
 
     public function findForUpdate(int $id): Activity;
