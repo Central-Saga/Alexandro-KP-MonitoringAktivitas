@@ -11,11 +11,11 @@ const statusLabel: Record<string, string> = {
 };
 
 const statusTone: Record<string, string> = {
-  approved: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
-  ongoing: "bg-[#EAF7FB] text-[#016273] ring-1 ring-inset ring-[#016273]/20",
-  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
-  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/20",
-  selesai: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+  approved: "bg-[#e9f0e8] text-[#42664a]",
+  ongoing: "bg-[#e9eeee] text-[#456461]",
+  pending: "bg-[#f3efe3] text-[#806b3e]",
+  rejected: "bg-[#f2e9e6] text-[#8a5145]",
+  selesai: "bg-[#f3efe3] text-[#806b3e]",
 };
 
 type RecentActivityTableProps = {
@@ -26,26 +26,29 @@ type RecentActivityTableProps = {
 
 export default function RecentActivityTable({ activities, isLoading, hasError }: RecentActivityTableProps) {
   return (
-    <section className="rounded-2xl border border-[#d0e6ed] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-      <header className="flex items-center justify-between border-b border-[#d0e6ed] px-6 py-5">
-        <h2 className="font-bold text-[#030303]">Aktivitas Terbaru</h2>
+    <section className="rounded-xl border border-[#e0e3dc] bg-[#fbfbf8]">
+      <header className="flex items-center justify-between border-b border-[#e6e8e2] px-5 py-4 sm:px-6">
+        <div>
+          <h2 className="text-sm font-semibold text-[#20292a]">Aktivitas terbaru</h2>
+          <p className="mt-1 text-xs text-[#737d79]">Laporan aktivitas yang baru masuk</p>
+        </div>
         <Link
           href="/admin/activities"
-          className="rounded-xl border border-[#016273]/30 px-4 py-2 text-sm font-semibold text-[#016273] hover:bg-[#EAF7FB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#016273]"
+          className="rounded-lg border border-[#d8ded7] px-3 py-2 text-xs font-semibold text-[#426d68] hover:bg-[#f1f3ee] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#426d68]"
         >
           Lihat Semua
         </Link>
       </header>
 
-      <div className="overflow-x-auto p-6" aria-busy={isLoading}>
+      <div className="overflow-x-auto p-4 sm:p-5" aria-busy={isLoading}>
         <table className="w-full min-w-[780px] border-collapse text-left text-sm">
-          <thead className="bg-[#EAF7FB] text-[#030303]">
+          <thead className="border-b border-[#e2e5df] text-[#687470]">
             <tr>
-              <th className="px-4 py-3 font-semibold">Karyawan</th>
-              <th className="px-4 py-3 font-semibold">Divisi</th>
-              <th className="px-4 py-3 font-semibold">Aktivitas</th>
-              <th className="px-4 py-3 font-semibold">Tanggal</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em]">Karyawan</th>
+              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em]">Divisi</th>
+              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em]">Aktivitas</th>
+              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em]">Tanggal</th>
+              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.1em]">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -57,17 +60,17 @@ export default function RecentActivityTable({ activities, isLoading, hasError }:
               <MessageRow message="Belum ada aktivitas terbaru." />
             ) : (
               activities.map((activity) => (
-                <tr key={activity.id} className="border-b border-[#d0e6ed] hover:bg-[#EAF7FB]/40 transition-colors last:border-0">
-                  <td className="px-4 py-4 font-medium text-[#030303]">{activity.user?.name ?? "—"}</td>
-                  <td className="px-4 py-4 text-[#5a737e]">{activity.user?.division?.name ?? "—"}</td>
-                  <td className="px-4 py-4 font-medium text-[#030303]">
+                <tr key={activity.id} className="border-b border-[#eceee9] transition-colors hover:bg-[#f5f6f2] last:border-0">
+                  <td className="px-4 py-4 font-medium text-[#293333]">{activity.user?.name ?? "—"}</td>
+                  <td className="px-4 py-4 text-[#737d79]">{activity.user?.division?.name ?? "—"}</td>
+                  <td className="px-4 py-4 font-medium text-[#293333]">
                     <p>{activity.title}</p>
-                    <p className="mt-1 text-xs font-normal text-[#5a737e]">{activity.project?.name ?? "—"}</p>
+                    <p className="mt-1 text-xs font-normal text-[#737d79]">{activity.project?.name ?? "—"}</p>
                     <MediaList items={activity.media} />
                   </td>
-                  <td className="px-4 py-4 text-[#5a737e]">{formatDate(activity.activity_date)}</td>
+                  <td className="px-4 py-4 text-[#737d79]">{formatDate(activity.activity_date)}</td>
                   <td className="px-4 py-4">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone[activity.status] ?? "bg-slate-100 text-slate-600"}`}>
+                    <span className={`rounded-md px-2 py-1 text-[11px] font-medium ${statusTone[activity.status] ?? "bg-[#eef0ec] text-[#65706b]"}`}>
                       {statusLabel[activity.status] ?? activity.status}
                     </span>
                   </td>

@@ -79,7 +79,7 @@ export default function AdminTopbar({
 
 
   return (
-    <header className="flex min-h-[82px] items-center border-b border-[#dce4ec] bg-white px-4 sm:px-7">
+    <header className="flex min-h-[72px] items-center border-b border-[#e0e3dc] bg-[#fbfbf8] px-4 sm:px-7">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -90,11 +90,11 @@ export default function AdminTopbar({
       </button>
 
       <div>
-        <h1 className="text-xl font-bold text-[#030303] sm:text-2xl">
+        <h1 className="text-lg font-semibold tracking-tight text-[#20292a] sm:text-xl">
           {pageTitles[pathname] ?? "Administrator"}
         </h1>
-        <p className="mt-0.5 hidden text-sm text-[#5a737e] sm:block">
-          Central Saga Mandala
+        <p className="mt-0.5 hidden text-xs text-[#707b78] sm:block">
+          Central Saga Mandala · Monitoring aktivitas
         </p>
       </div>
 
@@ -106,9 +106,9 @@ export default function AdminTopbar({
           aria-expanded={dropdownOpen}
           aria-haspopup="menu"
           aria-label="Menu akun pengguna"
-          className="flex items-center gap-2.5 rounded-xl border border-transparent p-1.5 transition-colors hover:border-[#d0e6ed] hover:bg-[#EAF7FB]/60 focus:outline-none focus:ring-2 focus:ring-[#016273]/20 sm:p-2"
+          className="flex items-center gap-2.5 rounded-lg border border-transparent p-1.5 transition-colors hover:border-[#e0e3dc] hover:bg-[#f3f4f0] focus:outline-none focus:ring-2 focus:ring-[#285c5e]/20 sm:p-2"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#016273] text-sm font-bold text-white shadow-sm ring-2 ring-[#EAF7FB]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#285c5e] text-xs font-semibold text-white">
             {initials}
           </div>
           <div className="hidden text-left sm:block">
@@ -137,7 +137,7 @@ export default function AdminTopbar({
           <div
             role="menu"
             aria-orientation="vertical"
-            className="absolute right-0 top-full mt-2 w-60 rounded-2xl border border-[#d0e6ed] bg-white p-2 shadow-lg ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-100"
+            className="absolute right-0 top-full z-50 mt-2 w-60 animate-in fade-in zoom-in-95 rounded-xl border border-[#e0e3dc] bg-[#fbfbf8] p-2 shadow-lg ring-1 ring-black/5 duration-100"
           >
             {/* Header Identity in Dropdown */}
             <div className="px-3 py-2.5">
@@ -148,22 +148,22 @@ export default function AdminTopbar({
                 <p className="truncate text-xs text-[#5a737e]">{user.email}</p>
               )}
               <div className="mt-1.5">
-                <span className="inline-flex rounded-full bg-[#EAF7FB] px-2.5 py-0.5 text-[10px] font-semibold text-[#016273] ring-1 ring-inset ring-[#016273]/20">
+                <span className="inline-flex rounded-md bg-[#eef1ec] px-2 py-0.5 text-[10px] font-medium text-[#526b62]">
                   {roleLabel}
                 </span>
               </div>
             </div>
 
-            <div className="my-1 border-t border-[#e1e7ee]" />
+            <div className="my-1 border-t border-[#e6e8e2]" />
 
             {/* Menu Items */}
             <Link
               href="/admin/profile"
               role="menuitem"
               onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#030303] transition-colors hover:bg-[#EAF7FB] hover:text-[#016273]"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#35403d] transition-colors hover:bg-[#f0f2ed] hover:text-[#426d68]"
             >
-              <AdminIcon name="user" className="h-4 w-4 text-[#5a737e]" />
+              <AdminIcon name="user" className="h-4 w-4 text-[#737d79]" />
               Profil Saya
             </Link>
 
@@ -174,9 +174,9 @@ export default function AdminTopbar({
                 setDropdownOpen(false);
                 logout();
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[#8a5145] transition-colors hover:bg-[#f2e9e6]"
             >
-              <AdminIcon name="logout" className="h-4 w-4 text-rose-500" />
+              <AdminIcon name="logout" className="h-4 w-4 text-[#8a5145]" />
               Logout
             </button>
           </div>

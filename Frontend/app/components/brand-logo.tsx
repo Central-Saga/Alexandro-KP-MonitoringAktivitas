@@ -48,7 +48,7 @@ export default function BrandLogo({
           <p className="text-base font-extrabold leading-tight tracking-tight text-white">
             WorkTrack
           </p>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#E1F25F]/90">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#bdc9b8]">
             Monitoring System
           </p>
         </div>
