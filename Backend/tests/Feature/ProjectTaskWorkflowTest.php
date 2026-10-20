@@ -12,6 +12,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -66,6 +67,11 @@ class ProjectTaskWorkflowTest extends TestCase
         $this->postJson('/api/project-tasks', $this->taskPayload($projectA, $employeeA))->assertForbidden();
         $this->putJson("/api/project-tasks/{$taskA->id}", ['title' => 'Tidak boleh'])->assertForbidden();
         $this->patchJson("/api/project-tasks/{$taskA->id}/status", ['status' => 'completed'])->assertForbidden();
+
+        // Policy dijalankan sebelum validasi agar payload invalid tetap menghasilkan 403.
+        $this->postJson('/api/project-tasks', [])->assertForbidden();
+        $this->putJson("/api/project-tasks/{$taskA->id}", ['title' => ['invalid']])->assertForbidden();
+        $this->patchJson("/api/project-tasks/{$taskA->id}/status", [])->assertForbidden();
 
         Sanctum::actingAs($admin);
         $this->getJson('/api/project-tasks')->assertOk()->assertJsonCount(2, 'data');
@@ -231,6 +237,23 @@ class ProjectTaskWorkflowTest extends TestCase
         // sehingga jumlah query tidak bertambah untuk setiap baris Task.
         $this->assertLessThanOrEqual(10, count(DB::getQueryLog()));
         DB::disableQueryLog();
+    }
+
+    public function test_custom_role_with_task_view_permission_cannot_bypass_role_scope(): void
+    {
+        $manager = $this->makeUser('project_manager');
+        $employee = $this->makeUser('karyawan');
+        $project = $this->makeProject($manager);
+        $this->assign($project, $employee);
+        $this->makeTask($project, $employee, $manager);
+
+        $auditorRole = Role::create(['name' => 'auditor', 'guard_name' => 'web']);
+        $auditorRole->givePermissionTo('project_task.view');
+        $auditor = User::factory()->create();
+        $auditor->syncRoles('auditor');
+        Sanctum::actingAs($auditor);
+
+        $this->getJson('/api/project-tasks')->assertForbidden();
     }
 
     private function makeUser(string $role, array $overrides = []): User

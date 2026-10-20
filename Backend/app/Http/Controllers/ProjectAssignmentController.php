@@ -10,6 +10,7 @@ use App\Models\ProjectAssignment;
 use App\Models\User;
 use App\Support\QueryCache;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 
 class ProjectAssignmentController extends Controller
 {
@@ -70,19 +71,24 @@ class ProjectAssignmentController extends Controller
             ->exists();
 
         if ($exists) {
-            return response()->json([
-                'message' => 'Karyawan sudah memiliki histori penugasan pada project ini. Aktifkan kembali assignment yang ada.',
-                'errors' => ['user_id' => ['Karyawan sudah ditugaskan ke project ini.']],
-            ], 422);
+            return $this->apiError(
+                'Karyawan sudah memiliki histori penugasan pada project ini. Aktifkan kembali assignment yang ada.',
+                422,
+                ['user_id' => ['Karyawan sudah ditugaskan ke project ini.']],
+            );
         }
 
         $data['project_id'] = $project->id;
         $data['status'] ??= 'aktif';
-        $assignment = ProjectAssignment::query()->create($data);
-        $employeeName = $assignment->user()->value('name');
-        activity('project_assignment')->causedBy($request->user())->performedOn($assignment)->event('created')
-            ->withProperty('subject_name', $employeeName)
-            ->log("Menambahkan {$employeeName} ke proyek {$project->name}");
+        $assignment = DB::transaction(function () use ($request, $project, $data) {
+            $assignment = ProjectAssignment::query()->create($data);
+            $employeeName = $assignment->user()->value('name');
+            activity('project_assignment')->causedBy($request->user())->performedOn($assignment)->event('created')
+                ->withProperty('subject_name', $employeeName)
+                ->log("Menambahkan {$employeeName} ke proyek {$project->name}");
+
+            return $assignment;
+        });
         $this->invalidateScopeCaches();
 
         return response()->json([
@@ -114,18 +120,23 @@ class ProjectAssignmentController extends Controller
             if (! $employee?->is_active || ! $employee->hasRole('karyawan')) {
                 // Reactivation juga divalidasi backend karena status/role user
                 // dapat berubah setelah assignment pertama kali dibuat.
-                return response()->json([
-                    'message' => 'Assignment hanya dapat diaktifkan untuk Karyawan aktif.',
-                    'errors' => ['status' => ['Karyawan harus aktif sebelum assignment diaktifkan.']],
-                ], 422);
+                return $this->apiError(
+                    'Assignment hanya dapat diaktifkan untuk Karyawan aktif.',
+                    422,
+                    ['status' => ['Karyawan harus aktif sebelum assignment diaktifkan.']],
+                );
             }
         }
 
-        $assignment->update($data);
-        $employeeName = $assignment->user()->value('name');
-        activity('project_assignment')->causedBy($request->user())->performedOn($assignment)->event('updated')
-            ->withProperty('subject_name', $employeeName)
-            ->log("Mengubah penugasan {$employeeName} pada proyek {$project->name}");
+        $assignment = DB::transaction(function () use ($request, $assignment, $data, $project) {
+            $assignment->update($data);
+            $employeeName = $assignment->user()->value('name');
+            activity('project_assignment')->causedBy($request->user())->performedOn($assignment)->event('updated')
+                ->withProperty('subject_name', $employeeName)
+                ->log("Mengubah penugasan {$employeeName} pada proyek {$project->name}");
+
+            return $assignment;
+        });
         $this->invalidateScopeCaches();
 
         return response()->json([

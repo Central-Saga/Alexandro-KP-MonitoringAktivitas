@@ -34,14 +34,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::get('/profile/activity-logs', [ProfileController::class, 'activityLogs']);
     Route::put('/profile', [ProfileController::class, 'update']);
-    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
+        ->middleware('throttle:5,1');
 
     // Activities
     // Route kustom approve/reject/media diletakkan sebelum resource CRUD standar
     Route::get('/activities/summary/today', [ActivityController::class, 'todaySummary']);
     Route::post('/activities/{activity}/approve', [ActivityController::class, 'approve']);
     Route::post('/activities/{activity}/reject', [ActivityController::class, 'reject']);
-    Route::post('/activities/{id}/media', [ActivityController::class, 'uploadMedia']);
+    Route::post('/activities/{id}/media', [ActivityController::class, 'uploadMedia'])
+        ->middleware('throttle:20,1');
     Route::apiResource('activities', ActivityController::class);
 
     // Project

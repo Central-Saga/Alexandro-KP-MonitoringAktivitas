@@ -9,7 +9,8 @@ class ProjectTaskPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('project_task.view');
+        return $user->hasAnyRole(['admin', 'project_manager', 'karyawan'])
+            && $user->can('project_task.view');
     }
 
     public function view(User $user, ProjectTask $task): bool

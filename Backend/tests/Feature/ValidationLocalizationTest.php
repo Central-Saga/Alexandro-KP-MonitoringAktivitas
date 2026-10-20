@@ -23,13 +23,17 @@ class ValidationLocalizationTest extends TestCase
         parent::setUp();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        foreach (['activity.approve', 'activity.reject'] as $permission) {
+        foreach (['activity.approve', 'activity.reject', 'project_task.create'] as $permission) {
             Permission::create(['name' => $permission, 'guard_name' => 'web']);
         }
         foreach (['admin', 'project_manager', 'karyawan'] as $role) {
             Role::create(['name' => $role, 'guard_name' => 'web']);
         }
-        Role::findByName('admin')->syncPermissions(['activity.approve', 'activity.reject']);
+        Role::findByName('admin')->syncPermissions([
+            'activity.approve',
+            'activity.reject',
+            'project_task.create',
+        ]);
         Role::findByName('project_manager')->syncPermissions(['activity.approve', 'activity.reject']);
     }
 
@@ -52,6 +56,9 @@ class ValidationLocalizationTest extends TestCase
 
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['title', 'project_id', 'assigned_to', 'due_date']);
+        $response->assertJsonPath('success', false)
+            ->assertJsonPath('data', null)
+            ->assertJsonStructure(['success', 'message', 'data', 'errors']);
 
         $errors = $response->json('errors');
         $this->assertSame('judul wajib diisi.', $errors['title'][0]);

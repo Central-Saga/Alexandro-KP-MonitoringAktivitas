@@ -238,6 +238,7 @@ function DailyActivityInput({
   const [message, setMessage] = useState("");
   const [deepLinkError, setDeepLinkError] = useState("");
   const [errors, setErrors] = useState<LaravelFieldErrors>({});
+  const [editorResetKey, setEditorResetKey] = useState(0);
 
   const selectedTask =
     tasks.find((task) => task.id === form.project_task_id) ?? null;
@@ -330,6 +331,7 @@ function DailyActivityInput({
   }
 
   function resetForm() {
+    setEditorResetKey((current) => current + 1);
     setForm({
       activity_date: localDateKey(new Date()),
       project_id: 0,
@@ -557,6 +559,7 @@ function DailyActivityInput({
 
           <div className="pt-1">
             <StructuredActivityEditor
+              key={editorResetKey}
               idPrefix="daily"
               value={form.description}
               onChange={(nextDescription) =>
@@ -1259,6 +1262,7 @@ function EditActivityDialog({
 
         <div className="pt-1">
           <StructuredActivityEditor
+            key={activity.id}
             idPrefix="edit"
             value={form.description}
             onChange={(nextDescription) =>

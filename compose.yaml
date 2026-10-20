@@ -5,6 +5,8 @@ x-backend-environment: &backend-environment
   DB_DATABASE: monitoring_aktivitas_csm
   DB_USERNAME: postgres
   DB_PASSWORD: postgres
+  # Development-only fallback. Set APP_KEY in the environment for deployment.
+  APP_KEY: ${APP_KEY:-base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
   QUEUE_CONNECTION: redis
   CACHE_STORE: redis
   SESSION_DRIVER: redis
@@ -12,11 +14,11 @@ x-backend-environment: &backend-environment
   REDIS_HOST: redis
   REDIS_PASSWORD: "null"
   REDIS_PORT: 6379
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3002}
 
 services:
   postgres:
     image: postgres:17
-    container_name: postgres-csm
     restart: unless-stopped
 
     environment:
@@ -30,58 +32,83 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d monitoring_aktivitas_csm"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   redis:
     image: docker.io/library/redis:7-alpine
-    container_name: redis-csm
     restart: unless-stopped
 
     ports:
       - "6379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
     build:
       context: ./Backend
       dockerfile: Dockerfile
 
-    container_name: backend-csm
     restart: unless-stopped
+
+    command: ["sh", "-c", "php artisan migrate --force && exec apache2-foreground"]
 
     ports:
       - "8000:80"
 
     volumes:
       - ./Backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
 
     environment: *backend-environment
 
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: >-
+        curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{}'
+        http://localhost/api/login | grep -q '^422$'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   queue-worker:
     build:
       context: ./Backend
       dockerfile: Dockerfile
 
-    container_name: queue-worker-csm
     restart: unless-stopped
     command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=90
 
     volumes:
       - ./Backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
 
     environment: *backend-environment
 
     depends_on:
-      - redis
-      - backend
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
 
-    container_name: frontend-csm
     restart: unless-stopped
 
     ports:
@@ -95,8 +122,10 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8000
 
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  backend_vendor:
   frontend_node_modules:

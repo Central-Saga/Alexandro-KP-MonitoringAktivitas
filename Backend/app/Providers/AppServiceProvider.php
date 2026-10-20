@@ -22,6 +22,7 @@ use App\Services\DivisionService;
 use App\Services\ProjectTaskService;
 use App\Services\RoleService;
 use App\Services\UserService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -56,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // N+1 harus terlihat selama development dan test. Production tetap
+        // mengizinkan lazy loading agar request lama tidak gagal mendadak.
+        Model::preventLazyLoading(! $this->app->isProduction());
     }
 }

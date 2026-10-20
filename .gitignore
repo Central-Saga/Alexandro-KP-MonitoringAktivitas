@@ -11,6 +11,16 @@
 node_modules/
 vendor/
 
+# Build artifacts lintas subproject
+build/
+dist/
+out/
+.next/
+coverage/
+
+# Windows download metadata
+*:Zone.Identifier
+
 # OS
 .DS_Store
 Thumbs.db

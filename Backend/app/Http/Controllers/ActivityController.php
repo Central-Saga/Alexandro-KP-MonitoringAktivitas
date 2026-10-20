@@ -6,6 +6,8 @@ use App\Contracts\Services\ActivityServiceInterface;
 use App\Enums\ActivityStatus;
 use App\Events\ActivityCreated;
 use App\Http\Requests\IndexActivityRequest;
+use App\Http\Requests\StoreActivityRequest;
+use App\Http\Requests\UpdateActivityRequest;
 use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Models\Project;
@@ -14,6 +16,7 @@ use App\Notifications\ActivityResubmittedNotification;
 use App\Notifications\ActivityRevisionRequestedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ActivityController extends Controller
@@ -58,9 +61,7 @@ class ActivityController extends Controller
         $activity = $this->service->getById($id);
 
         if (! $activity) {
-            return response()->json([
-                'message' => 'Aktivitas tidak ditemukan',
-            ], 404);
+            return $this->apiError('Aktivitas tidak ditemukan', 404);
         }
 
         // Policy menentukan apakah user boleh melihat activity.
@@ -72,30 +73,9 @@ class ActivityController extends Controller
     /**
      * Membuat activity baru.
      */
-    public function store(Request $request)
+    public function store(StoreActivityRequest $request)
     {
-        Gate::authorize('create', Activity::class);
-
-        $data = $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'project_task_id' => 'nullable|exists:project_tasks,id',
-            'user_id' => 'required|exists:users,id',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-
-            // Status hanya boleh menggunakan nilai
-            // yang sudah didefinisikan oleh enum.
-            'status' => [
-                'nullable',
-                Rule::in([
-                    ActivityStatus::PENDING->value,
-                    ActivityStatus::ONGOING->value,
-                    ActivityStatus::SELESAI->value,
-                ]),
-            ],
-
-            'activity_date' => 'required|date',
-        ]);
+        $data = $request->validated();
 
         $user = $request->user();
 
@@ -121,9 +101,7 @@ class ActivityController extends Controller
                 ->exists();
 
             if (! $assigned) {
-                return response()->json([
-                    'message' => 'Anda tidak ditugaskan ke project ini.',
-                ], 403);
+                return $this->apiError('Anda tidak ditugaskan ke project ini.', 403);
             }
         }
 
@@ -139,9 +117,7 @@ class ActivityController extends Controller
                 ->exists();
 
             if (! $projectOwned) {
-                return response()->json([
-                    'message' => 'Anda bukan Project Manager dari project ini.',
-                ], 403);
+                return $this->apiError('Anda bukan Project Manager dari project ini.', 403);
             }
 
             /*
@@ -157,9 +133,7 @@ class ActivityController extends Controller
                 ->exists();
 
             if (! $assigned) {
-                return response()->json([
-                    'message' => 'Karyawan tersebut tidak ditugaskan ke project ini.',
-                ], 403);
+                return $this->apiError('Karyawan tersebut tidak ditugaskan ke project ini.', 403);
             }
         }
 
@@ -169,14 +143,18 @@ class ActivityController extends Controller
          * Admin tetap diperbolehkan membuat activity
          * untuk user/project sesuai kebutuhan administrasi.
          */
-        $activity = $this->service->create($data);
-        $activity->reviews()->create([
-            'actor_id' => $request->user()->id,
-            'action' => 'submitted',
-        ]);
-        $activity->load('reviews.actor');
-        activity('activity')->causedBy($request->user())->performedOn($activity)->event('created')
-            ->withProperty('subject_name', $activity->title)->log("Membuat aktivitas {$activity->title}");
+        $activity = DB::transaction(function () use ($request, $data) {
+            $activity = $this->service->create($data);
+            $activity->reviews()->create([
+                'actor_id' => $request->user()->id,
+                'action' => 'submitted',
+            ]);
+            $activity->load('reviews.actor');
+            activity('activity')->causedBy($request->user())->performedOn($activity)->event('created')
+                ->withProperty('subject_name', $activity->title)->log("Membuat aktivitas {$activity->title}");
+
+            return $activity;
+        });
 
         // Kirim event setelah activity berhasil dibuat.
         ActivityCreated::dispatch($activity);
@@ -190,39 +168,18 @@ class ActivityController extends Controller
     /**
      * Memperbarui activity.
      */
-    public function update(Request $request, int $id)
+    public function update(UpdateActivityRequest $request, int $id)
     {
         $activity = $this->service->getById($id);
 
         if (! $activity) {
-            return response()->json([
-                'message' => 'Aktivitas tidak ditemukan',
-            ], 404);
+            return $this->apiError('Aktivitas tidak ditemukan', 404);
         }
 
         // Policy memastikan user memiliki hak update.
         Gate::authorize('update', $activity);
 
-        $data = $request->validate([
-            'project_id' => 'sometimes|exists:projects,id',
-            'project_task_id' => 'sometimes|nullable|exists:project_tasks,id',
-            'user_id' => 'sometimes|exists:users,id',
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-
-            // Approval/rejection hanya boleh melalui endpoint dedicated agar
-            // actor, timestamp, reason, dan transition selalu tercatat.
-            'status' => [
-                'sometimes',
-                Rule::in([
-                    ActivityStatus::PENDING->value,
-                    ActivityStatus::ONGOING->value,
-                    ActivityStatus::SELESAI->value,
-                ]),
-            ],
-
-            'activity_date' => 'sometimes|date',
-        ]);
+        $data = $request->validated();
 
         $user = $request->user();
 
@@ -250,9 +207,7 @@ class ActivityController extends Controller
                     ->exists();
 
                 if (! $assigned) {
-                    return response()->json([
-                        'message' => 'Anda tidak lagi ditugaskan ke project ini.',
-                    ], 403);
+                    return $this->apiError('Anda tidak lagi ditugaskan ke project ini.', 403);
                 }
             }
         }
@@ -273,9 +228,7 @@ class ActivityController extends Controller
                 ->exists();
 
             if (! $projectOwned) {
-                return response()->json([
-                    'message' => 'Anda bukan Project Manager dari project ini.',
-                ], 403);
+                    return $this->apiError('Anda bukan Project Manager dari project ini.', 403);
             }
 
             /*
@@ -296,9 +249,7 @@ class ActivityController extends Controller
                 ->exists();
 
             if (! $assigned) {
-                return response()->json([
-                    'message' => 'Karyawan tersebut tidak ditugaskan ke project ini.',
-                ], 403);
+                    return $this->apiError('Karyawan tersebut tidak ditugaskan ke project ini.', 403);
             }
 
             /*
@@ -345,9 +296,7 @@ class ActivityController extends Controller
         $activity = $this->service->getById($id);
 
         if (! $activity) {
-            return response()->json([
-                'message' => 'Aktivitas tidak ditemukan',
-            ], 404);
+            return $this->apiError('Aktivitas tidak ditemukan', 404);
         }
 
         // Policy memastikan hanya pemilik activity
@@ -389,9 +338,7 @@ class ActivityController extends Controller
         $activity = $this->service->getById($id);
 
         if (! $activity) {
-            return response()->json([
-                'message' => 'Aktivitas tidak ditemukan',
-            ], 404);
+            return $this->apiError('Aktivitas tidak ditemukan', 404);
         }
 
         // Policy menentukan siapa yang boleh menghapus activity.

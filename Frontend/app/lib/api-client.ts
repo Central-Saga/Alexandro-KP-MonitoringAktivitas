@@ -1,5 +1,7 @@
 import { getApiUrl, getStoredAuth } from "./auth";
 
+export const UNAUTHORIZED_EVENT = "csm:unauthorized";
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -35,6 +37,10 @@ export async function apiFetch<T>(
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+
     const message =
       data && typeof data === "object" && "message" in data
         ? String(data.message)

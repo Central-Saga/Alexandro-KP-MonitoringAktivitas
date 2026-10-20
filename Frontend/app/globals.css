@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-geist-sans: Arial, Helvetica, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --color-brand-dark: #030303;
   --color-brand-primary: #016273;
   --color-brand-primary-hover: #014d5a;

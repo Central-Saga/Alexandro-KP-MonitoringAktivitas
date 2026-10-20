@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateRoleRequest;
 use App\Http\Resources\RoleResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -58,9 +59,7 @@ class RoleController extends Controller
         $role = $this->service->getById($id);
 
         if (! $role) {
-            return response()->json([
-                'message' => 'Role tidak ditemukan.',
-            ], 404);
+            return $this->apiError('Role tidak ditemukan.', 404);
         }
 
         return new RoleResource($role);
@@ -88,15 +87,17 @@ class RoleController extends Controller
                 ->exists();
 
             if ($invalidGuard) {
-                return response()->json([
-                    'message' => 'Permission menggunakan guard yang berbeda.',
-                ], 422);
+                return $this->apiError('Permission menggunakan guard yang berbeda.', 422);
             }
         }
 
-        $role = $this->service->create($data);
-        activity('role')->causedBy($request->user())->performedOn($role)->event('created')
-            ->withProperty('subject_name', $role->name)->log("Membuat role {$role->name}");
+        $role = DB::transaction(function () use ($request, $data) {
+            $role = $this->service->create($data);
+            activity('role')->causedBy($request->user())->performedOn($role)->event('created')
+                ->withProperty('subject_name', $role->name)->log("Membuat role {$role->name}");
+
+            return $role;
+        });
 
         return response()->json([
             'message' => 'Role berhasil dibuat.',
@@ -115,9 +116,7 @@ class RoleController extends Controller
         $role = $this->service->getById($id);
 
         if (! $role) {
-            return response()->json([
-                'message' => 'Role tidak ditemukan.',
-            ], 404);
+            return $this->apiError('Role tidak ditemukan.', 404);
         }
 
         // Role bawaan sistem tidak boleh sembarangan
@@ -129,9 +128,7 @@ class RoleController extends Controller
             in_array($role->name, self::SYSTEM_ROLES, true)
             && $data['name'] !== $role->name
         ) {
-            return response()->json([
-                'message' => 'Nama role bawaan sistem tidak dapat diubah.',
-            ], 422);
+            return $this->apiError('Nama role bawaan sistem tidak dapat diubah.', 422);
         }
 
         // Jika permission dikirim, pastikan permission
@@ -145,15 +142,17 @@ class RoleController extends Controller
                 ->exists();
 
             if ($invalidGuard) {
-                return response()->json([
-                    'message' => 'Permission menggunakan guard yang berbeda.',
-                ], 422);
+                return $this->apiError('Permission menggunakan guard yang berbeda.', 422);
             }
         }
 
-        $role = $this->service->update($role, $data);
-        activity('role')->causedBy($request->user())->performedOn($role)->event('updated')
-            ->withProperty('subject_name', $role->name)->log("Mengubah hak akses {$role->name}");
+        $role = DB::transaction(function () use ($request, $role, $data) {
+            $role = $this->service->update($role, $data);
+            activity('role')->causedBy($request->user())->performedOn($role)->event('updated')
+                ->withProperty('subject_name', $role->name)->log("Mengubah hak akses {$role->name}");
+
+            return $role;
+        });
 
         return response()->json([
             'message' => 'Role berhasil diperbarui.',
@@ -180,9 +179,7 @@ class RoleController extends Controller
         $role = $this->service->getById($id);
 
         if (! $role) {
-            return response()->json([
-                'message' => 'Role tidak ditemukan.',
-            ], 404);
+            return $this->apiError('Role tidak ditemukan.', 404);
         }
 
         // Jangan izinkan Admin menghapus role yang sedang
@@ -190,16 +187,12 @@ class RoleController extends Controller
         $usersUsingRole = User::role($role->name)->exists();
 
         if ($usersUsingRole) {
-            return response()->json([
-                'message' => 'Role masih digunakan oleh user dan tidak dapat dihapus.',
-            ], 422);
+            return $this->apiError('Role masih digunakan oleh user dan tidak dapat dihapus.', 422);
         }
 
         // Jangan izinkan role sistem utama dihapus.
         if (in_array($role->name, self::SYSTEM_ROLES, true)) {
-            return response()->json([
-                'message' => 'Role bawaan sistem tidak dapat dihapus.',
-            ], 422);
+            return $this->apiError('Role bawaan sistem tidak dapat dihapus.', 422);
         }
 
         $this->service->delete($role);

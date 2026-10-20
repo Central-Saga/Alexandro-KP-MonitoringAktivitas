@@ -11,7 +11,12 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, apiGet, apiPost } from "../lib/api-client";
+import {
+  ApiError,
+  apiGet,
+  apiPost,
+  UNAUTHORIZED_EVENT,
+} from "../lib/api-client";
 import {
   clearAuth,
   getStoredAuth,
@@ -45,6 +50,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      resetSession();
+      router.replace("/");
+    };
+
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+
+    return () => {
+      window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    };
+  }, [resetSession, router]);
 
   const refreshCurrentUser = useCallback(async () => {
     const storedAuth = getStoredAuth();

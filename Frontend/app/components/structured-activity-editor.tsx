@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export interface StructuredDescriptionData {
   isStructured: boolean;
@@ -79,32 +79,12 @@ export function StructuredActivityEditor({
   error,
   required = false,
 }: StructuredActivityEditorProps) {
+  const initialValue = parseStructuredDescription(value);
   const [mode, setMode] = useState<"structured" | "freeform">("structured");
-  const [results, setResults] = useState("");
-  const [blockers, setBlockers] = useState("");
-  const [nextSteps, setNextSteps] = useState("");
-  const [freeformText, setFreeformText] = useState("");
-
-  // Initialize from value once or when value is reset from outside (e.g. form reset)
-  useEffect(() => {
-    if (!value) {
-      setResults("");
-      setBlockers("");
-      setNextSteps("");
-      setFreeformText("");
-      return;
-    }
-
-    const parsed = parseStructuredDescription(value);
-    setResults(parsed.results);
-    setBlockers(parsed.blockers);
-    setNextSteps(parsed.nextSteps);
-    setFreeformText(value);
-
-    if (parsed.isStructured && mode !== "structured") {
-      setMode("structured");
-    }
-  }, [value]);
+  const [results, setResults] = useState(initialValue.results);
+  const [blockers, setBlockers] = useState(initialValue.blockers);
+  const [nextSteps, setNextSteps] = useState(initialValue.nextSteps);
+  const [freeformText, setFreeformText] = useState(value);
 
   function updateStructured(
     nextResults: string,

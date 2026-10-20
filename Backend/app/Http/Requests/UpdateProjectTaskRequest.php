@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests;
 
+use App\Models\ProjectTask;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProjectTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $projectTask = $this->route('project_task');
+
+        return $projectTask instanceof ProjectTask
+            && ($this->user()?->can('update', $projectTask) ?? false);
     }
 
     public function rules(): array
