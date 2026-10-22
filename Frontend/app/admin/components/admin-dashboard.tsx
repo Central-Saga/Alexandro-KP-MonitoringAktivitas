@@ -21,16 +21,11 @@ export default function AdminDashboard() {
   const hasPartialError = Boolean(fatalError) || resources.some((resource) => resource.error !== null);
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] space-y-5 p-4 sm:p-6 lg:p-8" aria-busy={isLoading}>
-      <div className="pb-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#73807a]">Ringkasan</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#20292a]">Pantauan operasional</h2>
-        <p className="mt-1 text-sm text-[#737d79]">Ikhtisar pengguna, proyek, dan aktivitas harian.</p>
-      </div>
+    <main className="space-y-6 p-4 sm:p-7" aria-busy={isLoading}>
       {hasPartialError && (
         <div
           role="alert"
-          className="flex flex-col gap-3 rounded-lg border border-[#e5d8b6] bg-[#f6f2e8] px-4 py-3 text-sm text-[#76643c] sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between"
         >
           <span>Sebagian data dashboard belum dapat dimuat.</span>
           <button type="button" onClick={refetch} className="self-start font-semibold underline sm:self-auto">
@@ -39,7 +34,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <section aria-label="Ringkasan angka" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total User"
           value={metricValue(data?.userTotal.data, isLoading)}
@@ -70,7 +65,7 @@ export default function AdminDashboard() {
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <WeeklyActivity
           data={data?.weeklyActivity.data ?? null}
           isLoading={isLoading}

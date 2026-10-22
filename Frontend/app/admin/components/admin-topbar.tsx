@@ -79,22 +79,22 @@ export default function AdminTopbar({
 
 
   return (
-    <header className="flex min-h-[72px] items-center border-b border-[#e0e3dc] bg-[#fbfbf8] px-4 sm:px-7">
+    <header className="flex min-h-[82px] items-center border-b border-[#d3e5d1] bg-white px-4 sm:px-7">
       <button
         type="button"
         onClick={onOpenMenu}
         aria-label="Buka menu"
-        className="mr-3 rounded-lg border border-[#dce4ec] p-2 text-[#60738f] transition-colors hover:bg-slate-50 lg:hidden"
+        className="mr-3 rounded-lg border border-[#d3e5d1] p-2 text-[#61776a] transition-colors hover:bg-slate-50 lg:hidden"
       >
         <AdminIcon name="menu" className="h-5 w-5" />
       </button>
 
       <div>
-        <h1 className="text-lg font-semibold tracking-tight text-[#20292a] sm:text-xl">
+        <h1 className="text-xl font-bold text-[#030303] sm:text-2xl">
           {pageTitles[pathname] ?? "Administrator"}
         </h1>
-        <p className="mt-0.5 hidden text-xs text-[#707b78] sm:block">
-          Central Saga Mandala · Monitoring aktivitas
+        <p className="mt-0.5 hidden text-sm text-[#61776a] sm:block">
+          Central Saga Mandala
         </p>
       </div>
 
@@ -106,21 +106,21 @@ export default function AdminTopbar({
           aria-expanded={dropdownOpen}
           aria-haspopup="menu"
           aria-label="Menu akun pengguna"
-          className="flex items-center gap-2.5 rounded-lg border border-transparent p-1.5 transition-colors hover:border-[#e0e3dc] hover:bg-[#f3f4f0] focus:outline-none focus:ring-2 focus:ring-[#285c5e]/20 sm:p-2"
+          className="flex items-center gap-2.5 rounded-xl border border-transparent p-1.5 transition-colors hover:border-[#d3e5d1] hover:bg-[#edf5e9]/60 focus:outline-none focus:ring-2 focus:ring-[#245f3e]/20 sm:p-2"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#285c5e] text-xs font-semibold text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#245f3e] text-sm font-bold text-white shadow-sm ring-2 ring-[#edf5e9]">
             {initials}
           </div>
           <div className="hidden text-left sm:block">
             <p className="max-w-[150px] truncate text-xs font-bold text-[#030303] md:max-w-[180px] md:text-sm">
               {user?.name ?? "Administrator"}
             </p>
-            <p className="text-[11px] text-[#5a737e]">{roleLabel}</p>
+            <p className="text-[11px] text-[#61776a]">{roleLabel}</p>
           </div>
           <svg
             viewBox="0 0 20 20"
             fill="currentColor"
-            className={`h-4 w-4 text-[#5a737e] transition-transform duration-200 ${
+            className={`h-4 w-4 text-[#61776a] transition-transform duration-200 ${
               dropdownOpen ? "rotate-180" : ""
             }`}
             aria-hidden="true"
@@ -137,7 +137,7 @@ export default function AdminTopbar({
           <div
             role="menu"
             aria-orientation="vertical"
-            className="absolute right-0 top-full z-50 mt-2 w-60 animate-in fade-in zoom-in-95 rounded-xl border border-[#e0e3dc] bg-[#fbfbf8] p-2 shadow-lg ring-1 ring-black/5 duration-100"
+            className="absolute right-0 top-full mt-2 w-60 rounded-2xl border border-[#d3e5d1] bg-white p-2 shadow-lg ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-100"
           >
             {/* Header Identity in Dropdown */}
             <div className="px-3 py-2.5">
@@ -145,25 +145,25 @@ export default function AdminTopbar({
                 {user?.name ?? "Administrator"}
               </p>
               {user?.email && (
-                <p className="truncate text-xs text-[#5a737e]">{user.email}</p>
+                <p className="truncate text-xs text-[#61776a]">{user.email}</p>
               )}
               <div className="mt-1.5">
-                <span className="inline-flex rounded-md bg-[#eef1ec] px-2 py-0.5 text-[10px] font-medium text-[#526b62]">
+                <span className="inline-flex rounded-full bg-[#edf5e9] px-2.5 py-0.5 text-[10px] font-semibold text-[#245f3e] ring-1 ring-inset ring-[#245f3e]/20">
                   {roleLabel}
                 </span>
               </div>
             </div>
 
-            <div className="my-1 border-t border-[#e6e8e2]" />
+            <div className="my-1 border-t border-[#e0e9dc]" />
 
             {/* Menu Items */}
             <Link
               href="/admin/profile"
               role="menuitem"
               onClick={() => setDropdownOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#35403d] transition-colors hover:bg-[#f0f2ed] hover:text-[#426d68]"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#030303] transition-colors hover:bg-[#edf5e9] hover:text-[#245f3e]"
             >
-              <AdminIcon name="user" className="h-4 w-4 text-[#737d79]" />
+              <AdminIcon name="user" className="h-4 w-4 text-[#61776a]" />
               Profil Saya
             </Link>
 
@@ -174,9 +174,9 @@ export default function AdminTopbar({
                 setDropdownOpen(false);
                 logout();
               }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[#8a5145] transition-colors hover:bg-[#f2e9e6]"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
             >
-              <AdminIcon name="logout" className="h-4 w-4 text-[#8a5145]" />
+              <AdminIcon name="logout" className="h-4 w-4 text-rose-500" />
               Logout
             </button>
           </div>

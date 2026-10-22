@@ -83,4 +83,13 @@ npm run build
 
 ## Screenshot
 
-Tambahkan screenshot halaman dashboard pada `docs/screenshots/` setelah aplikasi dijalankan dan akun demo dibuat. Screenshot dapat disertakan dengan Markdown, misalnya `![Dashboard Admin](docs/screenshots/admin-dashboard.png)`.
+Berikut adalah tampilan antarmuka sistem Monitoring Aktivitas CSM:
+
+![Dashboard Admin](docs/screenshots/admin-dashboard.png)
+*Gambar 1: Dashboard Utama Admin*
+
+![Dashboard Karyawan](docs/screenshots/karyawan-dashboard.png)
+*Gambar 2: Dashboard & Aktivitas Karyawan*
+
+![Dashboard Project Manager](docs/screenshots/pm-dashboard.png)
+*Gambar 3: Dashboard & Validasi Aktivitas Project Manager*
