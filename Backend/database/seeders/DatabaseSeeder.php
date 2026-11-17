@@ -47,5 +47,9 @@ class DatabaseSeeder extends Seeder
         User::factory(10)->create()->each(
             fn (User $user) => $user->syncRoles('karyawan')
         );
+
+        // 5. Data demo (divisi, project, penugasan, task, aktivitas).
+        //    Idempoten: aman dijalankan berulang kali.
+        $this->call(DemoDataSeeder::class);
     }
 }
