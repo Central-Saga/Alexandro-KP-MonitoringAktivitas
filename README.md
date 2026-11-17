@@ -70,6 +70,27 @@ npm run dev
 
 Frontend lokal berjalan di <http://localhost:3000>. Pastikan `Backend/.env` mengizinkan origin tersebut lewat `CORS_ALLOWED_ORIGINS`.
 
+## Menjalankan frontend mode produksi
+
+Dockerfile di `Frontend/` menjalankan `npm run dev`, jadi khusus development. Untuk build produksi:
+
+```bash
+cd Frontend
+cp .env.example .env.local      # isi NEXT_PUBLIC_API_URL ke API yang dipakai browser
+npm ci
+npm run build
+npm start                       # Next.js start di port 3000
+```
+
+Atau lewat container multi-stage `Frontend/Dockerfile.prod` (deps → build → runner):
+
+```bash
+docker build -f Frontend/Dockerfile.prod   --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000/api   -t monitoring-frontend:prod Frontend
+docker run -p 3000:3000 monitoring-frontend:prod
+```
+
+Catatan: variabel `NEXT_PUBLIC_*` di-inline Next.js saat build, jadi nilainya harus sudah benar pada tahap `npm run build` / `docker build` — bukan saat container dijalankan.
+
 ## Menjalankan pemeriksaan
 
 ```bash
