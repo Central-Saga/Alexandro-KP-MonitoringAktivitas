@@ -1,4 +1,9 @@
 x-backend-environment: &backend-environment
+  # Override eksplisit untuk stack development: Backend/.env.example sengaja
+  # default ke APP_ENV=production + APP_DEBUG=false agar aman bila dipakai
+  # sebagai acuan deployment.
+  APP_ENV: local
+  APP_DEBUG: "true"
   DB_CONNECTION: pgsql
   DB_HOST: postgres
   DB_PORT: 5432
